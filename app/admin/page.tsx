@@ -45,7 +45,7 @@ interface Stats {
 // CONSTANTES Y CONFIGURACIÓN
 // ══════════════════════════════════════════════════════════
 const API_BASE   = '${process.env.NEXT_PUBLIC_API_URL}/admin'
-const AUTH_TOKEN = 'Bearer ${process.env.NEXT_PUBLIC_ADMIN_TOKEN}'
+const AUTH_TOKEN = 'irachembot_admin_2026_supersecreto'
 const HEADERS    = { Authorization: AUTH_TOKEN, 'Content-Type': 'application/json' }
 
 const ESTADOS = ['pendiente', 'en_proceso', 'resuelto', 'cerrado'] as const
