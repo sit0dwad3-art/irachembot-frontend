@@ -44,9 +44,9 @@ interface Stats {
 // ══════════════════════════════════════════════════════════
 // CONSTANTES Y CONFIGURACIÓN
 // ══════════════════════════════════════════════════════════
-const API_BASE   = '${process.env.NEXT_PUBLIC_API_URL}/admin'
+const API_BASE   = `${process.env.NEXT_PUBLIC_API_URL ?? 'https://irachembot-backend-production.up.railway.app'}/admin`
 const AUTH_TOKEN = 'irachembot_admin_2026_supersecreto'
-const HEADERS    = { Authorization: AUTH_TOKEN, 'Content-Type': 'application/json' }
+const HEADERS    = { Authorization: `Bearer ${AUTH_TOKEN}`, 'Content-Type': 'application/json' }
 
 const ESTADOS = ['pendiente', 'en_proceso', 'resuelto', 'cerrado'] as const
 

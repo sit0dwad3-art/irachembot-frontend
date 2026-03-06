@@ -1,33 +1,39 @@
-// lib/api.ts
-import { API_URL, ADMIN_TOKEN } from './config'
+// frontend/lib/api.ts
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://irachembot-backend-production.up.railway.app'
+const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? 'irachembot_admin_2026_supersecreto'
 
 const adminHeaders = {
   'Content-Type': 'application/json',
   'Authorization': `Bearer ${ADMIN_TOKEN}`
 }
 
-// ── Chat público ──────────────────────────────────────────
+// ── Chat público ─────────────────────────────────────────
 export async function enviarMensaje(payload: {
   sesion_id: string
   mensaje: string
   paso: string
   datos_sesion: Record<string, string>
 }) {
-  const res = await fetch(`${API_URL}/chat/mensaje`, {
+  const url = `${BASE_URL}/chat/mensaje`
+  console.log('📡 Enviando a:', url)
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  if (!res.ok) throw new Error('Error al enviar mensaje')
+  if (!res.ok) throw new Error(`Error ${res.status}`)
   return res.json()
 }
 
-// ── Admin ─────────────────────────────────────────────────
+// ── Admin ────────────────────────────────────────────────
 export async function getEstadisticas() {
-  const res = await fetch(`${API_URL}/admin/estadisticas`, {
-    headers: adminHeaders
-  })
-  if (!res.ok) throw new Error('Error estadísticas')
+  const url = `${BASE_URL}/admin/estadisticas`
+  console.log('📡 Stats URL:', url)
+
+  const res = await fetch(url, { headers: adminHeaders })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
   return res.json()
 }
 
@@ -41,10 +47,11 @@ export async function getReclamaciones(filtros?: {
   if (filtros?.categoria) params.set('categoria', filtros.categoria)
   if (filtros?.urgencia)  params.set('urgencia', filtros.urgencia)
 
-  const res = await fetch(`${API_URL}/admin/reclamaciones?${params}`, {
-    headers: adminHeaders
-  })
-  if (!res.ok) throw new Error('Error reclamaciones')
+  const url = `${BASE_URL}/admin/reclamaciones?${params}`
+  console.log('📡 Reclamaciones URL:', url)
+
+  const res = await fetch(url, { headers: adminHeaders })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
   return res.json()
 }
 
@@ -52,11 +59,12 @@ export async function actualizarReclamacion(
   id: string,
   datos: { estado?: string; notas_admin?: string; respuesta_enviada?: string }
 ) {
-  const res = await fetch(`${API_URL}/admin/reclamaciones/${id}`, {
+  const res = await fetch(`${BASE_URL}/admin/reclamaciones/${id}`, {
     method: 'PATCH',
     headers: adminHeaders,
     body: JSON.stringify(datos)
   })
-  if (!res.ok) throw new Error('Error actualizando')
+  if (!res.ok) throw new Error(`Error ${res.status}`)
   return res.json()
 }
+

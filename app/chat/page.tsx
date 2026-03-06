@@ -48,7 +48,7 @@ export default function ChatPage() {
   const iniciarConversacion = async () => {
     setCargando(true)
     try {
-      const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/chat/mensaje', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://irachembot-backend-production.up.railway.app'}/chat/mensaje`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sesion_id: sesionId, mensaje: '', paso: 'bienvenida', datos_sesion: {} }),
@@ -79,7 +79,7 @@ export default function ChatPage() {
     else if (sesion.paso === 'recoger_problema') nuevosDatos.email = texto
 
     try {
-      const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/chat/mensaje', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://irachembot-backend-production.up.railway.app'}/chat/mensaje`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
