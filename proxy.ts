@@ -1,4 +1,4 @@
-// frontend/middleware.ts
+// frontend/proxy.ts
 
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -9,7 +9,7 @@ const PUBLIC_PATHS = [
   '/chat',
 ]
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Solo protege rutas /admin (excepto /admin/login)
