@@ -1,11 +1,13 @@
 // frontend/app/admin/login/page.tsx
 'use client'
 
+import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Eye, EyeOff, Shield } from 'lucide-react'
 
-export default function AdminLogin() {
+// ── Componente INTERNO que usa useSearchParams ──
+function LoginForm() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const from         = searchParams.get('from') || '/admin'
@@ -37,14 +39,12 @@ export default function AdminLogin() {
 
       const { token, expires_in } = await res.json()
 
-      // Guardar token en cookie segura
       const expires = new Date(Date.now() + expires_in * 1000)
       document.cookie = [
         `admin_session=${token}`,
         `expires=${expires.toUTCString()}`,
         'path=/',
         'SameSite=Strict',
-        // 'Secure',  // ← descomenta en producción HTTPS
       ].join('; ')
 
       router.push(from)
@@ -70,8 +70,6 @@ export default function AdminLogin() {
         backdropFilter: 'blur(16px)',
         boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
       }}>
-
-        {/* Icono */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             width: '64px', height: '64px', borderRadius: '18px',
@@ -93,7 +91,6 @@ export default function AdminLogin() {
           </p>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{
@@ -121,12 +118,10 @@ export default function AdminLogin() {
                   border: `1px solid ${error ? '#ef4444' : 'rgba(51,65,85,0.8)'}`,
                   borderRadius: '12px', color: '#f1f5f9',
                   fontSize: '0.95rem', outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box', transition: 'border-color 0.2s',
                 }}
                 onFocus={e => e.currentTarget.style.borderColor = '#6366f1'}
-                onBlur={e  => e.currentTarget.style.borderColor = error
-                  ? '#ef4444' : 'rgba(51,65,85,0.8)'}
+                onBlur={e  => e.currentTarget.style.borderColor = error ? '#ef4444' : 'rgba(51,65,85,0.8)'}
               />
               <button
                 type="button"
@@ -138,14 +133,11 @@ export default function AdminLogin() {
                   cursor: 'pointer', padding: 0,
                 }}
               >
-                {showPwd
-                  ? <EyeOff size={16} color="#475569" />
-                  : <Eye    size={16} color="#475569" />}
+                {showPwd ? <EyeOff size={16} color="#475569" /> : <Eye size={16} color="#475569" />}
               </button>
             </div>
           </div>
 
-          {/* Error */}
           {error && (
             <div style={{
               background: 'rgba(239,68,68,0.1)',
@@ -159,15 +151,12 @@ export default function AdminLogin() {
             </div>
           )}
 
-          {/* Botón */}
           <button
             type="submit"
             disabled={loading || !password.trim()}
             style={{
               width: '100%', padding: '0.95rem',
-              background: loading
-                ? 'rgba(79,70,229,0.5)'
-                : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              background: loading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
               border: 'none', borderRadius: '14px',
               color: 'white', fontSize: '1rem', fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
@@ -179,7 +168,6 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        {/* Footer */}
         <p style={{
           textAlign: 'center', marginTop: '1.5rem',
           color: '#1e293b', fontSize: '0.75rem',
@@ -188,5 +176,23 @@ export default function AdminLogin() {
         </p>
       </div>
     </div>
+  )
+}
+
+// ── Export DEFAULT con Suspense wrapper ──
+export default function AdminLogin() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(160deg, #060b18 0%, #0a0f1e 60%, #0d0820 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#475569', fontFamily: 'system-ui, sans-serif',
+      }}>
+        Cargando...
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
