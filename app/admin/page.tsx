@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useRealtime }     from '@/hooks/useRealtime'
+import { RealtimeAlerta }  from '@/components/RealtimeAlerta'
 import {
   BarChart3, Clock, AlertTriangle, CheckCircle2,
   Smartphone, Landmark, Zap, Shield, Bus, FileText,
@@ -16,7 +18,7 @@ import {
 // ══════════════════════════════════════════════════════════
 // TIPOS
 // ══════════════════════════════════════════════════════════
-interface Reclamacion {
+export interface Reclamacion {
   id: string
   nombre: string
   email: string
@@ -765,7 +767,13 @@ function PanelAnalytics({ stats, reclamaciones }: { stats: Stats; reclamaciones:
 export default function AdminPage() {
   const router = useRouter()
 
-  const [reclamaciones,       setReclamaciones]       = useState<Reclamacion[]>([])
+const {
+  reclamaciones: reclamacionesRT,
+  conectado,
+  nuevaAlerta,
+  recargar,
+} = useRealtime()
+  const [reclamaciones, setReclamaciones] = useState<Reclamacion[]>([])
   const [stats,               setStats]               = useState<Stats>({ total: 0, pendientes: 0, urgentes: 0, resueltos: 0 })
   const [filtro,              setFiltro]              = useState('todos')
   const [seleccionada,        setSeleccionada]        = useState<Reclamacion | null>(null)
@@ -791,21 +799,15 @@ export default function AdminPage() {
   const cargarDatos = useCallback(async () => {
     try {
       const headers = getAuthHeaders()
-      const [rRes, sRes] = await Promise.all([
-        fetch(`${API_BASE}/admin/reclamaciones`,  { headers }),
-        fetch(`${API_BASE}/admin/estadisticas`,   { headers }),
-      ])
+      const sRes = await fetch(`${API_BASE}/admin/estadisticas`, { headers })
 
       // Si el token expiró → redirigir al login
-      if (rRes.status === 401 || rRes.status === 403) {
+      if (sRes.status === 401 || sRes.status === 403) {
         router.push('/admin/login')
         return
       }
 
-      const rData = await rRes.json()
       const sData = await sRes.json()
-
-      setReclamaciones(Array.isArray(rData) ? rData : rData.reclamaciones || [])
       setStats({
         total:      sData.total      ?? 0,
         pendientes: sData.pendientes ?? 0,
@@ -820,11 +822,41 @@ export default function AdminPage() {
     }
   }, [router])
 
-  useEffect(() => { cargarDatos() }, [cargarDatos])
-  useEffect(() => {
-    const interval = setInterval(cargarDatos, 60_000)
-    return () => clearInterval(interval)
-  }, [cargarDatos])
+
+
+
+useEffect(() => {
+  setReclamaciones(reclamacionesRT)
+  if (reclamacionesRT.length > 0) {
+    // Recalcular stats localmente desde los datos
+    const total      = reclamacionesRT.length
+    const pendientes = reclamacionesRT.filter(r => r.estado === 'pendiente').length
+    const urgentes   = reclamacionesRT.filter(r => r.urgencia === 'alta' || r.urgencia === 'urgente').length
+    const resueltos  = reclamacionesRT.filter(r => r.estado === 'resuelto').length
+    setStats({ total, pendientes, urgentes, resueltos })
+    setUltimaActualizacion(new Date())
+    setCargando(false)
+  }
+}, [reclamacionesRT])
+
+// cargarDatos sigue existiendo para el botón "Actualizar"
+// pero ahora también llama a recargar del hook
+const cargarDatosCompleto = useCallback(async () => {
+  await recargar()
+  // Mantener las estadísticas del backend (más precisas)
+  try {
+    const sRes  = await fetch(`${API_BASE}/admin/estadisticas`, { headers: getAuthHeaders() })
+    if (sRes.ok) {
+      const sData = await sRes.json()
+      setStats({
+        total:      sData.total      ?? 0,
+        pendientes: sData.pendientes ?? 0,
+        urgentes:   sData.urgentes   ?? 0,
+        resueltos:  sData.resueltos  ?? 0,
+      })
+    }
+  } catch (e) { console.error(e) }
+}, [recargar])
 
   // ── Cambiar estado ──────────────────────────────────
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
@@ -835,7 +867,7 @@ export default function AdminPage() {
         body: JSON.stringify({ estado: nuevoEstado }),
       })
       if (!res.ok) throw new Error('Error al actualizar')
-      await cargarDatos()
+      await cargarDatosCompleto()
       if (seleccionada?.id === id)
         setSeleccionada(prev => prev ? { ...prev, estado: nuevoEstado } : null)
       mostrarNotificacion(`Estado actualizado → ${ESTADO_CONFIG[nuevoEstado]?.label}`)
@@ -866,6 +898,8 @@ export default function AdminPage() {
       background: 'linear-gradient(160deg, #060b18 0%, #0a0f1e 60%, #0d0820 100%)',
       fontFamily: 'system-ui, sans-serif', color: '#f1f5f9',
     }}>
+      {/* ── ALERTA REALTIME ── */}
+      <RealtimeAlerta alerta={nuevaAlerta} />
 
       {/* ── TOAST ── */}
       {notificacion && (
@@ -918,13 +952,16 @@ export default function AdminPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.38rem' }}>
           <div style={{
             width: '6px', height: '6px', borderRadius: '50%',
-            background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,0.6)',
-            animation: 'pulse-dot 2s ease-in-out infinite',
+            background: conectado ? '#34d399' : '#f87171',
+            boxShadow: conectado ? '0 0 6px rgba(52,211,153,0.6)' : '0 0 6px rgba(248,113,113,0.6)',
+            animation: conectado ? 'pulse-dot 2s ease-in-out infinite' : 'none',
           }} />
-          <span style={{ fontSize: '0.68rem', color: '#334155' }}>
-            {ultimaActualizacion
-              ? `Act. ${ultimaActualizacion.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
-              : 'Conectando...'}
+          <span style={{ fontSize: '0.68rem', color: conectado ? '#334155' : '#f87171' }}>
+            {conectado
+              ? ultimaActualizacion
+                ? `RT · ${ultimaActualizacion.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Tiempo real activo'
+              : 'Reconectando...'}
           </span>
         </div>
 
@@ -952,7 +989,7 @@ export default function AdminPage() {
         </div>
 
         {/* Actualizar */}
-        <button onClick={cargarDatos} disabled={cargando} style={{
+        <button onClick={cargarDatosCompleto} disabled={cargando} style={{
           background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)',
           borderRadius: '8px', padding: '0.42rem 0.8rem', color: '#6366f1',
           cursor: 'pointer', fontSize: '0.78rem',
@@ -1249,8 +1286,17 @@ export default function AdminPage() {
                 <span style={{ fontSize: '0.7rem', color: '#334155' }}>
                   Mostrando {recFiltradas.length} de {reclamaciones.length} casos
                 </span>
-                <span style={{ fontSize: '0.7rem', color: '#1e293b' }}>
-                  Auto-refresh cada 60s
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  color: conectado ? '#34d399' : '#f87171',
+                  display: 'flex', alignItems: 'center', gap: '0.3rem'
+                }}>
+                  <span style={{
+                    width: '5px', height: '5px', borderRadius: '50%',
+                    background: conectado ? '#34d399' : '#f87171',
+                    display: 'inline-block'
+                  }}/>
+                  {conectado ? 'Tiempo real activo' : 'Reconectando...'}
                 </span>
               </div>
             )}
