@@ -33,16 +33,20 @@ export function useRealtime() {
   const [nuevaAlerta, setNuevaAlerta] = useState<RealtimeEvent | null>(null)
 
   // Carga inicial
-  const cargarReclamaciones = useCallback(async () => {
+    const cargarReclamaciones = useCallback(async () => {
     const { data, error } = await supabase
-      .from('reclamaciones')
-      .select('*')
-      .order('created_at', { ascending: false })
+        .from('reclamaciones')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      setReclamaciones(data as Reclamacion[])
+    if (error) {
+        console.error('❌ Supabase error:', error.message)
+        setReclamaciones([])  // ← array vacío para desbloquear el loading
+        return
     }
-  }, [])
+
+    setReclamaciones((data ?? []) as Reclamacion[])
+    }, [])
 
   useEffect(() => {
     // 1. Carga inicial de datos

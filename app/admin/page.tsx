@@ -827,16 +827,16 @@ const {
 
 useEffect(() => {
   setReclamaciones(reclamacionesRT)
-  if (reclamacionesRT.length > 0) {
-    // Recalcular stats localmente desde los datos
-    const total      = reclamacionesRT.length
-    const pendientes = reclamacionesRT.filter(r => r.estado === 'pendiente').length
-    const urgentes   = reclamacionesRT.filter(r => r.urgencia === 'alta' || r.urgencia === 'urgente').length
-    const resueltos  = reclamacionesRT.filter(r => r.estado === 'resuelto').length
-    setStats({ total, pendientes, urgentes, resueltos })
-    setUltimaActualizacion(new Date())
-    setCargando(false)
-  }
+  
+  // Siempre actualizar stats, tenga o no datos
+  const total      = reclamacionesRT.length
+  const pendientes = reclamacionesRT.filter(r => r.estado === 'pendiente').length
+  const urgentes   = reclamacionesRT.filter(r => r.urgencia === 'alta' || r.urgencia === 'urgente').length
+  const resueltos  = reclamacionesRT.filter(r => r.estado === 'resuelto').length
+  setStats({ total, pendientes, urgentes, resueltos })
+  setUltimaActualizacion(new Date())
+  setCargando(false)  // ← SIEMPRE, con o sin datos
+
 }, [reclamacionesRT])
 
 // cargarDatos sigue existiendo para el botón "Actualizar"
