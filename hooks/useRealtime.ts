@@ -1,5 +1,5 @@
 // frontend/hooks/useRealtime.ts
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export type Reclamacion = {
@@ -26,74 +26,67 @@ type RealtimeEvent = {
   timestamp: Date
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL
+  ?? 'https://irachembot-backend-production.up.railway.app'
+
+function getAuthHeaders(): Record<string, string> {
+  if (typeof document === 'undefined') return {}
+  const token = document.cookie
+    .split('; ')
+    .find(r => r.startsWith('admin_session='))
+    ?.split('=')[1] ?? ''
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+}
+
 export function useRealtime() {
   const [reclamaciones, setReclamaciones] = useState<Reclamacion[]>([])
-  const [eventos, setEventos] = useState<RealtimeEvent[]>([])
-  const [conectado, setConectado] = useState(false)
-  const [nuevaAlerta, setNuevaAlerta] = useState<RealtimeEvent | null>(null)
+  const [eventos,       setEventos]       = useState<RealtimeEvent[]>([])
+  const [conectado,     setConectado]     = useState(false)
+  const [nuevaAlerta,   setNuevaAlerta]   = useState<RealtimeEvent | null>(null)
 
-  // Carga inicial
-    const cargarReclamaciones = useCallback(async () => {
-    const { data, error } = await supabase
-        .from('reclamaciones')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error('❌ Supabase error:', error.message)
-        setReclamaciones([])  // ← array vacío para desbloquear el loading
-        return
+  // ── Carga inicial desde Railway (datos reales) ──────────────────────────
+  const cargarReclamaciones = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/reclamaciones`, {
+        headers: getAuthHeaders(),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setReclamaciones(Array.isArray(data) ? data : data.reclamaciones ?? [])
+    } catch (e) {
+      console.error('❌ Error cargando reclamaciones desde Railway:', e)
+      setReclamaciones([])
     }
-
-    setReclamaciones((data ?? []) as Reclamacion[])
-    }, [])
+  }, [])
 
   useEffect(() => {
-    // 1. Carga inicial de datos
+    // 1. Carga inicial desde Railway
     cargarReclamaciones()
 
-    // 2. Suscripción Realtime
+    // 2. Supabase Realtime — solo para recibir notificaciones de cambios
+    //    Cuando llega un evento → recargamos desde Railway (fuente de verdad)
     const channel = supabase
       .channel('reclamaciones-realtime')
       .on(
         'postgres_changes',
-        {
-          event: '*',         // INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'reclamaciones',
-        },
+        { event: '*', schema: 'public', table: 'reclamaciones' },
         (payload) => {
           const evento: RealtimeEvent = {
-            type: payload.eventType as RealtimeEvent['type'],
-            reclamacion: (payload.new || payload.old) as Reclamacion,
-            timestamp: new Date(),
+            type:         payload.eventType as RealtimeEvent['type'],
+            reclamacion:  (payload.new || payload.old) as Reclamacion,
+            timestamp:    new Date(),
           }
 
-          // Actualizar lista según el tipo de evento
-          setReclamaciones((prev) => {
-            switch (payload.eventType) {
-              case 'INSERT':
-                return [payload.new as Reclamacion, ...prev]
+          // Recargar lista completa desde Railway
+          cargarReclamaciones()
 
-              case 'UPDATE':
-                return prev.map((r) =>
-                  r.id === payload.new.id
-                    ? (payload.new as Reclamacion)
-                    : r
-                )
+          // Historial de eventos
+          setEventos(prev => [evento, ...prev].slice(0, 50))
 
-              case 'DELETE':
-                return prev.filter((r) => r.id !== payload.old.id)
-
-              default:
-                return prev
-            }
-          })
-
-          // Guardar evento en historial
-          setEventos((prev) => [evento, ...prev].slice(0, 50))
-
-          // Disparar alerta visual
+          // Alerta visual 4s
           setNuevaAlerta(evento)
           setTimeout(() => setNuevaAlerta(null), 4000)
         }
@@ -102,17 +95,9 @@ export function useRealtime() {
         setConectado(status === 'SUBSCRIBED')
       })
 
-    // 3. Cleanup al desmontar
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [cargarReclamaciones])
 
-  return {
-    reclamaciones,
-    eventos,
-    conectado,
-    nuevaAlerta,
-    recargar: cargarReclamaciones,
-  }
+  return { reclamaciones, eventos, conectado, nuevaAlerta, recargar: cargarReclamaciones }
 }
+
