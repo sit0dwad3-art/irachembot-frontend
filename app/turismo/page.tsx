@@ -94,14 +94,15 @@ const PASOS_TOTAL = 14
 
 export default function TurismoPage() {
   const router = useRouter()
-  const [mensajes, setMensajes]            = useState<Mensaje[]>([])
-  const [input, setInput]                  = useState('')
-  const [cargando, setCargando]            = useState(false)
-  const [sesionId]                         = useState(() => `turismo_${Date.now()}`)
-  const [paso, setPaso]                    = useState('bienvenida')
-  const [datos, setDatos]                  = useState<Record<string, string>>({})
-  const [planListo, setPlanListo]          = useState(false)
+  const [mensajes, setMensajes]             = useState<Mensaje[]>([])
+  const [input, setInput]                   = useState('')
+  const [cargando, setCargando]             = useState(false)
+  const [sesionId]                          = useState(() => `turismo_${Date.now()}`)
+  const [paso, setPaso]                     = useState('bienvenida')
+  const [datos, setDatos]                   = useState<Record<string, string>>({})
+  const [planListo, setPlanListo]           = useState(false)
   const [planTextoFinal, setPlanTextoFinal] = useState('')
+  const [botListo, setBotListo]             = useState(false)   // ← NUEVO
   const bottomRef = useRef<HTMLDivElement>(null)
   const iniciado  = useRef(false)
 
@@ -115,6 +116,7 @@ export default function TurismoPage() {
     iniciarConversacion()
   }, [])
 
+  // ── Init: solo llama con mensaje vacío ───────────────────────────────────
   const iniciarConversacion = async () => {
     setCargando(true)
     try {
@@ -122,22 +124,27 @@ export default function TurismoPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          sesion_id: sesionId, mensaje: '',
-          paso: 'bienvenida', datos_sesion: {},
+          sesion_id:   sesionId,
+          mensaje:     '',
+          paso:        'bienvenida',
+          datos_sesion: {},
         }),
       })
       const data = await res.json()
       setMensajes([{ rol: 'bot', contenido: data.respuesta, opciones: data.opciones }])
       setPaso(data.siguiente_paso)
+      setBotListo(true)   // ← desbloquea el input
     } catch {
       setMensajes([{ rol: 'bot', contenido: '⚠️ No puedo conectar con el servidor.' }])
+      setBotListo(true)   // ← desbloquea aunque haya error (para reintentar)
     } finally {
       setCargando(false)
     }
   }
 
+  // ── Enviar cualquier mensaje ─────────────────────────────────────────────
   const enviarMensaje = async (texto: string) => {
-    if (!texto.trim() || cargando) return
+    if (!texto.trim() || cargando || !botListo) return
     setInput('')
     setMensajes(prev => [...prev, { rol: 'usuario', contenido: texto }])
     setCargando(true)
@@ -147,8 +154,10 @@ export default function TurismoPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          sesion_id: sesionId, mensaje: texto,
-          paso, datos_sesion: datos,
+          sesion_id:    sesionId,
+          mensaje:      texto,
+          paso,
+          datos_sesion: datos,
         }),
       })
       const data = await res.json()
@@ -157,7 +166,7 @@ export default function TurismoPage() {
       setPaso(data.siguiente_paso)
 
       const nuevoMensaje: Mensaje = {
-        rol:       'bot',
+        rol:      'bot',
         contenido: data.respuesta,
         opciones:  data.opciones,
       }
@@ -185,7 +194,6 @@ export default function TurismoPage() {
     const fecha  = new Date().toLocaleDateString('es-ES')
     const plan   = planTextoFinal || '(sin contenido)'
 
-    // Convertir Markdown básico a HTML para el PDF
     const planHtml = plan
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g,     '<em>$1</em>')
@@ -195,7 +203,6 @@ export default function TurismoPage() {
       .replace(/^---$/gm,        '<hr>')
       .replace(/^\* (.+)$/gm,    '<li>$1</li>')
       .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
-      // Tablas Markdown → HTML
       .replace(
         /(\|.+\|\n)((?:\|[-:]+)+\|\n)((?:\|.+\|\n?)*)/g,
         (_, header, _sep, body) => {
@@ -283,6 +290,10 @@ export default function TurismoPage() {
 
   const progreso = Math.round(((PASOS_MAP[paso] ?? 0) / PASOS_TOTAL) * 100)
 
+  // ── Condiciones de bloqueo centralizadas ─────────────────────────────────
+  const inputBloqueado = !botListo || cargando || planListo
+  const botonBloqueado = !input.trim() || !botListo || cargando || planListo
+
   return (
     <div style={{
       minHeight: '100vh', background: '#0f172a',
@@ -311,7 +322,9 @@ export default function TurismoPage() {
 
         <div style={{ flex: 1 }}>
           <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: 15 }}>IracheBot Turismo</div>
-          <div style={{ color: '#10b981', fontSize: 12 }}>● En línea · Turismo & Ocio Navarra</div>
+          <div style={{ color: '#10b981', fontSize: 12 }}>
+            {botListo ? '● En línea · Turismo & Ocio Navarra' : '○ Conectando...'}
+          </div>
         </div>
 
         {planListo && (
@@ -361,7 +374,7 @@ export default function TurismoPage() {
             alignItems: m.rol === 'usuario' ? 'flex-end' : 'flex-start',
           }}>
 
-            {/* ── Burbuja con ReactMarkdown ── */}
+            {/* ── Burbuja ── */}
             <div style={{
               maxWidth: '80%',
               background: m.rol === 'usuario'
@@ -375,17 +388,15 @@ export default function TurismoPage() {
               fontSize: 14,
             }}>
               {m.rol === 'usuario' ? (
-                // Mensajes del usuario: texto plano (no necesitan Markdown)
                 <span>{m.contenido}</span>
               ) : (
-                // Mensajes del bot: Markdown completo
                 <ReactMarkdown components={mdBurbuja}>
                   {m.contenido}
                 </ReactMarkdown>
               )}
             </div>
 
-            {/* ── Card del plan con ReactMarkdown ── */}
+            {/* ── Card del plan ── */}
             {m.esPlan && m.planTexto && (
               <div style={{
                 maxWidth: '95%', width: '100%',
@@ -407,18 +418,18 @@ export default function TurismoPage() {
                   <button
                     key={j}
                     onClick={() => enviarMensaje(op)}
-                    disabled={cargando || i < mensajes.length - 1}
+                    disabled={cargando || !botListo || i < mensajes.length - 1}
                     style={{
                       background: '#0f172a',
                       border: '1px solid #059669', color: '#10b981',
                       borderRadius: 20, padding: '6px 14px',
-                      cursor: (cargando || i < mensajes.length - 1) ? 'default' : 'pointer',
+                      cursor: (cargando || !botListo || i < mensajes.length - 1) ? 'default' : 'pointer',
                       fontSize: 13,
-                      opacity: i < mensajes.length - 1 ? 0.35 : 1,
+                      opacity: (!botListo || i < mensajes.length - 1) ? 0.35 : 1,
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={e => {
-                      if (i === mensajes.length - 1 && !cargando)
+                      if (i === mensajes.length - 1 && !cargando && botListo)
                         (e.currentTarget as HTMLButtonElement).style.background = '#059669'
                     }}
                     onMouseLeave={e => {
@@ -458,35 +469,38 @@ export default function TurismoPage() {
         <div style={{
           display: 'flex', gap: 10, alignItems: 'center',
           background: '#1e293b', borderRadius: 14, padding: '8px 12px',
-          border: '1px solid #334155',
+          border: `1px solid ${inputBloqueado ? '#1e293b' : '#334155'}`,
+          transition: 'border-color 0.3s',
         }}>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && enviarMensaje(input)}
             placeholder={
-              planListo ? '✅ Plan generado — pulsa Descargar PDF' :
-              cargando  ? 'Procesando...' :
+              !botListo  ? '⏳ Conectando con el asistente...' :
+              planListo  ? '✅ Plan generado — pulsa Descargar PDF' :
+              cargando   ? 'Procesando...' :
               '✍️ Escribe tu respuesta...'
             }
-            disabled={cargando || planListo}
+            disabled={inputBloqueado}
             style={{
               flex: 1, background: 'none', border: 'none',
-              color: planListo ? '#475569' : '#f1f5f9',
+              color: (planListo || !botListo) ? '#475569' : '#f1f5f9',
               fontSize: 14, outline: 'none',
+              cursor: inputBloqueado ? 'not-allowed' : 'text',
             }}
           />
           <button
             onClick={() => enviarMensaje(input)}
-            disabled={!input.trim() || cargando || planListo}
+            disabled={botonBloqueado}
             style={{
-              background: input.trim() && !cargando && !planListo
+              background: !botonBloqueado
                 ? 'linear-gradient(135deg, #059669, #10b981)'
                 : '#334155',
               border: 'none', borderRadius: 10,
               width: 36, height: 36,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: input.trim() && !cargando && !planListo ? 'pointer' : 'default',
+              cursor: botonBloqueado ? 'not-allowed' : 'pointer',
               transition: 'background 0.2s',
             }}
           >
