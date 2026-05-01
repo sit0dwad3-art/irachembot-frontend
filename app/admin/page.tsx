@@ -281,12 +281,13 @@ function NotaItem({ nota, isLast }: { nota: NotaInterna; isLast: boolean }) {
 // PANEL DETALLE
 // ══════════════════════════════════════════════════════════
 function PanelDetalle({
-  caso, onClose, onEstadoChange, actualizando,
+  caso, onClose, onEstadoChange, actualizando, isModal = false,
 }: {
   caso: Reclamacion
   onClose: () => void
   onEstadoChange: (id: string, estado: string) => void
   actualizando: boolean
+  isModal?: boolean
 }) {
   const [notas,         setNotas]         = useState('')
   const [historial,     setHistorial]     = useState<NotaInterna[]>([])
@@ -342,11 +343,12 @@ function PanelDetalle({
     <div style={{
       background: 'rgba(8,13,26,0.98)',
       border: '1px solid rgba(99,102,241,0.22)',
-      borderRadius: '18px',
+      borderRadius: isModal ? '0' : '18px',
       backdropFilter: 'blur(24px)',
-      position: 'sticky', top: '76px',
+      position: isModal ? 'relative' : 'sticky',
+      top: isModal ? 'auto' : '76px',
       overflow: 'hidden',
-      boxShadow: '0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.08)',
+      boxShadow: isModal ? 'none' : '0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.08)',
     }}>
 
       {/* Header */}
@@ -766,6 +768,15 @@ function PanelAnalytics({ stats, reclamaciones }: { stats: Stats; reclamaciones:
 // ══════════════════════════════════════════════════════════
 export default function AdminPage() {
   const router = useRouter()
+    // ── Responsive ──────────────────────────────────────
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
 const {
   reclamaciones: reclamacionesRT,
@@ -922,10 +933,17 @@ const cargarDatosCompleto = useCallback(async () => {
       <div style={{
         background: 'rgba(4,8,20,0.98)',
         borderBottom: '1px solid rgba(99,102,241,0.12)',
-        padding: '0 1.5rem', height: '60px',
-        display: 'flex', alignItems: 'center', gap: '0.875rem',
+        padding: '0 1rem',
+        height: isMobile ? 'auto' : '60px',
+        minHeight: '60px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
         backdropFilter: 'blur(24px)',
         position: 'sticky', top: 0, zIndex: 100,
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        paddingTop:    isMobile ? '0.6rem' : '0',
+        paddingBottom: isMobile ? '0.6rem' : '0',
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -946,7 +964,7 @@ const cargarDatosCompleto = useCallback(async () => {
           </div>
         </div>
 
-        <div style={{ width: '1px', height: '22px', background: '#1e293b' }} />
+        <div style={{ width: '1px', height: '22px', background: '#1e293b', flexShrink: 0 }} />
 
         {/* Live indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.38rem' }}>
@@ -960,15 +978,20 @@ const cargarDatosCompleto = useCallback(async () => {
             {conectado
               ? ultimaActualizacion
                 ? `RT · ${ultimaActualizacion.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
-                : 'Tiempo real activo'
+                : 'Tiempo real'
               : 'Reconectando...'}
           </span>
         </div>
 
-        <div style={{ flex: 1 }} />
+        {/* Spacer — solo desktop */}
+        {!isMobile && <div style={{ flex: 1 }} />}
 
-        {/* Buscador */}
-        <div style={{ position: 'relative' }}>
+        {/* Buscador — ocupa línea completa en móvil */}
+        <div style={{
+          position: 'relative',
+          width: isMobile ? '100%' : 'auto',
+          order: isMobile ? 10 : 0,   // va al final en móvil
+        }}>
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
@@ -976,8 +999,10 @@ const cargarDatosCompleto = useCallback(async () => {
             style={{
               background: 'rgba(15,23,42,0.8)', border: '1px solid #1e293b',
               borderRadius: '8px', padding: '0.42rem 0.9rem 0.42rem 2.1rem',
-              color: '#f1f5f9', fontSize: '0.8rem', width: '240px', outline: 'none',
-              transition: 'border-color 0.2s',
+              color: '#f1f5f9', fontSize: '0.8rem',
+              width: isMobile ? '100%' : '220px',
+              outline: 'none', transition: 'border-color 0.2s',
+              boxSizing: 'border-box',
             }}
             onFocus={e => e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'}
             onBlur={e  => e.currentTarget.style.borderColor = '#1e293b'}
@@ -988,48 +1013,52 @@ const cargarDatosCompleto = useCallback(async () => {
           }} />
         </div>
 
-        {/* Actualizar */}
-        <button onClick={cargarDatosCompleto} disabled={cargando} style={{
-          background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)',
-          borderRadius: '8px', padding: '0.42rem 0.8rem', color: '#6366f1',
-          cursor: 'pointer', fontSize: '0.78rem',
-          display: 'flex', alignItems: 'center', gap: '0.38rem',
-          transition: 'all 0.2s',
+        {/* Botones — se agrupan en móvil */}
+        <div style={{
+          display: 'flex', gap: '0.4rem',
+          marginLeft: isMobile ? '0' : '0',
+          flexShrink: 0,
         }}>
-          {cargando
-            ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
-            : <RefreshCw size={12} />
-          }
-          Actualizar
-        </button>
+          <button onClick={cargarDatosCompleto} disabled={cargando} style={{
+            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)',
+            borderRadius: '8px', padding: '0.42rem 0.7rem', color: '#6366f1',
+            cursor: 'pointer', fontSize: '0.78rem',
+            display: 'flex', alignItems: 'center', gap: '0.38rem',
+            transition: 'all 0.2s', whiteSpace: 'nowrap',
+          }}>
+            {cargando
+              ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
+              : <RefreshCw size={12} />
+            }
+            {!isMobile && 'Actualizar'}
+          </button>
 
-        {/* Stats públicas */}
-        <button onClick={() => router.push('/stats')} style={{
-          background: 'transparent', border: '1px solid #1e293b',
-          borderRadius: '8px', padding: '0.42rem 0.8rem',
-          color: '#475569', cursor: 'pointer', fontSize: '0.78rem',
-          display: 'flex', alignItems: 'center', gap: '0.38rem',
-          transition: 'color 0.2s',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
-        >
-          <BarChart3 size={12} /> Stats públicas
-        </button>
+          {!isMobile && (
+            <button onClick={() => router.push('/stats')} style={{
+              background: 'transparent', border: '1px solid #1e293b',
+              borderRadius: '8px', padding: '0.42rem 0.8rem',
+              color: '#475569', cursor: 'pointer', fontSize: '0.78rem',
+              display: 'flex', alignItems: 'center', gap: '0.38rem',
+              transition: 'color 0.2s', whiteSpace: 'nowrap',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+            >
+              <BarChart3 size={12} /> Stats públicas
+            </button>
+          )}
 
-        {/* Logout */}
-        <button onClick={handleLogout} style={{
-          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
-          borderRadius: '8px', padding: '0.42rem 0.8rem',
-          color: '#f87171', cursor: 'pointer', fontSize: '0.78rem',
-          display: 'flex', alignItems: 'center', gap: '0.38rem',
-          transition: 'all 0.2s',
-        }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.12)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.06)' }}
-        >
-          <LogOut size={12} /> Salir
-        </button>
+          <button onClick={handleLogout} style={{
+            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
+            borderRadius: '8px', padding: '0.42rem 0.7rem',
+            color: '#f87171', cursor: 'pointer', fontSize: '0.78rem',
+            display: 'flex', alignItems: 'center', gap: '0.38rem',
+            transition: 'all 0.2s', whiteSpace: 'nowrap',
+          }}>
+            <LogOut size={12} />
+            {!isMobile && 'Salir'}
+          </button>
+        </div>
       </div>
 
       {/* ── CONTENIDO ── */}
@@ -1037,7 +1066,9 @@ const cargarDatosCompleto = useCallback(async () => {
 
         {/* ── KPI CARDS ── */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+          display: 'grid', gridTemplateColumns: isMobile
+          ? 'repeat(2, 1fr)'
+          : 'repeat(4, 1fr)',
           gap: '1rem', marginBottom: '1.5rem',
         }}>
           {KPI_CONFIG.map(({ key, label, Icon, color, bg, border }) => (
@@ -1084,7 +1115,7 @@ const cargarDatosCompleto = useCallback(async () => {
         {/* ── GRID PRINCIPAL ── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: seleccionada ? '1fr 370px' : '1fr 300px',
+          gridTemplateColumns: isMobile ? '1fr' : (seleccionada ? '1fr 370px' : '1fr 300px'),
           gap: '1.25rem',
           alignItems: 'start',
         }}>
@@ -1303,27 +1334,73 @@ const cargarDatosCompleto = useCallback(async () => {
           </div>
 
           {/* ── PANEL DERECHO: Detalle o Analytics ── */}
-          {seleccionada ? (
-            <PanelDetalle
-              caso={seleccionada}
-              onClose={() => setSeleccionada(null)}
-              onEstadoChange={cambiarEstado}
-              actualizando={actualizando}
-            />
+          {isMobile ? (
+            // ── MÓVIL: Modal overlay ──────────────────────────
+            seleccionada && (
+              <div style={{
+                position: 'fixed', inset: 0, zIndex: 200,
+                background: 'rgba(0,0,0,0.75)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex', alignItems: 'flex-end',
+                padding: '0',
+              }}
+                onClick={() => setSeleccionada(null)}
+              >
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    borderRadius: '20px 20px 0 0',
+                    background: 'rgba(8,13,26,0.99)',
+                    border: '1px solid rgba(99,102,241,0.22)',
+                    borderBottom: 'none',
+                    animation: 'slideUpModal 0.3s cubic-bezier(0.4,0,0.2,1)',
+                  }}
+                >
+                  {/* Handle bar */}
+                  <div style={{
+                    width: '36px', height: '4px', borderRadius: '2px',
+                    background: '#1e293b', margin: '0.75rem auto 0',
+                  }} />
+                  <PanelDetalle
+                    caso={seleccionada}
+                    onClose={() => setSeleccionada(null)}
+                    onEstadoChange={cambiarEstado}
+                    actualizando={actualizando}
+                    isModal={true}
+                  />
+                </div>
+              </div>
+            )
           ) : (
-            <PanelAnalytics
-              stats={stats}
-              reclamaciones={reclamaciones}
-            />
+            // ── DESKTOP: Sidebar sticky ───────────────────────
+            seleccionada ? (
+              <PanelDetalle
+                caso={seleccionada}
+                onClose={() => setSeleccionada(null)}
+                onEstadoChange={cambiarEstado}
+                actualizando={actualizando}
+                isModal={false}
+              />
+            ) : (
+              <PanelAnalytics
+                stats={stats}
+                reclamaciones={reclamaciones}
+              />
+            )
           )}
+
         </div>
       </div>
 
       {/* ── ESTILOS GLOBALES ── */}
       <style>{`
         @keyframes spin      { to { transform: rotate(360deg); } }
-        @keyframes pulse-dot { 0%,100% { opacity:1; box-shadow: 0 0 6px rgba(52,211,153,0.6); } 50% { opacity:0.4; box-shadow: none; } }
+        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         @keyframes slideUp   { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
         input::placeholder    { color: #334155; }
         textarea::placeholder { color: #334155; }
         ::-webkit-scrollbar         { width: 4px; height: 4px; }
