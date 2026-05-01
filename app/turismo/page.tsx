@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Send } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm' 
 import type { Components } from 'react-markdown'
 
 interface Mensaje {
@@ -390,7 +391,7 @@ export default function TurismoPage() {
               {m.rol === 'usuario' ? (
                 <span>{m.contenido}</span>
               ) : (
-                <ReactMarkdown components={mdBurbuja}>
+                <ReactMarkdown components={mdBurbuja} remarkPlugins={[remarkGfm]}>
                   {m.contenido}
                 </ReactMarkdown>
               )}
@@ -405,7 +406,7 @@ export default function TurismoPage() {
                 padding: '20px 24px',
                 fontSize: 13, color: '#d1fae5', lineHeight: 1.8,
               }}>
-                <ReactMarkdown components={mdPlan}>
+                <ReactMarkdown components={mdPlan} remarkPlugins={[remarkGfm]}>
                   {m.planTexto}
                 </ReactMarkdown>
               </div>
