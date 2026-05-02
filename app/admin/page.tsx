@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRealtime }     from '@/hooks/useRealtime'
 import { RealtimeAlerta }  from '@/components/RealtimeAlerta'
+import { PostGeneratorModal } from '@/components/PostGeneratorModal'
 import {
   BarChart3, Clock, AlertTriangle, CheckCircle2,
   Smartphone, Landmark, Zap, Shield, Bus, FileText,
@@ -12,7 +13,7 @@ import {
   CircleDot, CircleCheck, Circle, Plus, TrendingUp,
   Filter, Bell, Activity, MessageSquare, User,
   Hash, LogOut, ShieldCheck, Package, Music,
-  Palette, Hotel, BarChart2
+  Palette, Hotel, BarChart2, Share2
 } from 'lucide-react'
 
 // ══════════════════════════════════════════════════════════
@@ -793,6 +794,7 @@ const {
   const [busqueda,            setBusqueda]            = useState('')
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null)
   const [notificacion,        setNotificacion]        = useState<string | null>(null)
+  const [postModal, setPostModal] = useState<Reclamacion | null>(null)
 
   // ── Notificación toast ──────────────────────────────
   const mostrarNotificacion = (msg: string) => {
@@ -1289,23 +1291,44 @@ const cargarDatosCompleto = useCallback(async () => {
 
                         {/* Acciones */}
                         <td style={{ padding: '0.85rem 1.2rem' }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); setSeleccionada(isSelected ? null : r) }}
-                            style={{
-                              background: isSelected ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.07)',
-                              border: `1px solid ${isSelected ? 'rgba(99,102,241,0.38)' : 'rgba(99,102,241,0.14)'}`,
-                              borderRadius: '7px', padding: '0.28rem 0.7rem',
-                              color: isSelected ? '#a5b4fc' : '#6366f1',
-                              cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600,
-                              display: 'inline-flex', alignItems: 'center', gap: '0.28rem',
-                              transition: 'all 0.15s', whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {isSelected
-                              ? <><EyeOff size={11} /> Cerrar</>
-                              : <><Eye    size={11} /> Ver</>
-                            }
-                          </button>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); setSeleccionada(isSelected ? null : r) }}
+                              style={{
+                                background: isSelected ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.07)',
+                                border: `1px solid ${isSelected ? 'rgba(99,102,241,0.38)' : 'rgba(99,102,241,0.14)'}`,
+                                borderRadius: '7px', padding: '0.28rem 0.7rem',
+                                color: isSelected ? '#a5b4fc' : '#6366f1',
+                                cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600,
+                                display: 'inline-flex', alignItems: 'center', gap: '0.28rem',
+                                transition: 'all 0.15s', whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isSelected
+                                ? <><EyeOff size={11} /> Cerrar</>
+                                : <><Eye    size={11} /> Ver</>
+                              }
+                            </button>
+
+                            {/* 🟢 BOTÓN POST — solo si resuelto */}
+                            {r.estado === 'resuelto' && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setPostModal(r) }}
+                                style={{
+                                  background: '#022c22', border: '1px solid #065f46',
+                                  borderRadius: '7px', padding: '0.28rem 0.6rem',
+                                  color: '#6ee7b7', cursor: 'pointer',
+                                  fontSize: '0.76rem', fontWeight: 600,
+                                  display: 'inline-flex', alignItems: 'center', gap: '0.28rem',
+                                  transition: 'all 0.15s', whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#065f46'}
+                                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#022c22'}
+                              >
+                                <Share2 size={11} /> Post
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -1403,6 +1426,13 @@ const cargarDatosCompleto = useCallback(async () => {
       </div>
 
       {/* ── ESTILOS GLOBALES ── */}
+
+          {postModal && (
+            <PostGeneratorModal
+              caso={postModal}
+              onClose={() => setPostModal(null)}
+            />
+          )}
       <style>{`
         @keyframes spin      { to { transform: rotate(360deg); } }
         @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }

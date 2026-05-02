@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import FloatingComplaints from '@/components/FloatingComplaints'
 
+
 // ── Partículas de fondo ───────────────────────────────────────────────────────
 function Particles() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
