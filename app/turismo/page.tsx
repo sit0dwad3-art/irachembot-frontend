@@ -82,6 +82,13 @@ const mdPlan: Components = {
   hr: () => <hr style={{ border: 'none', borderTop: '1px solid #065f46', margin: '10px 0' }} />,
 }
 
+// ── Mapa chip → mercado para el backend ──────────────────
+const CHIP_MERCADO: Record<string, string> = {
+  '🏰 Pamplona':         'navarra',
+  '🗺️ Toda Navarra':    'navarra',
+  '🌍 Fuera de Navarra': 'internacional',
+  '✨ Sorpréndeme':      'navarra',
+}
 const PASOS_MAP: Record<string, number> = {
   bienvenida: 0, recoger_nombre: 1, recoger_email: 2,
   recoger_tipo: 3, recoger_compania: 4, recoger_personas: 5,
@@ -102,6 +109,7 @@ export default function TurismoPage() {
   const [paso, setPaso]                     = useState('bienvenida')
   const [datos, setDatos]                   = useState<Record<string, string>>({})
   const [planListo, setPlanListo]           = useState(false)
+  const [mercado, setMercado] = useState<string>('auto')
   const [planTextoFinal, setPlanTextoFinal] = useState('')
   const [botListo, setBotListo]             = useState(false)   // ← NUEVO
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -159,9 +167,12 @@ export default function TurismoPage() {
           mensaje:      texto,
           paso,
           datos_sesion: datos,
+          mercado:      CHIP_MERCADO[texto] ?? mercado,
         }),
       })
       const data = await res.json()
+
+      if (data.mercado_detectado) setMercado(data.mercado_detectado)
 
       if (data.datos_actualizados) setDatos(data.datos_actualizados)
       setPaso(data.siguiente_paso)
@@ -271,7 +282,11 @@ export default function TurismoPage() {
     <p>Preparado para <strong style="color:#a78bfa">${nombre}</strong> · ${fecha}</p>
     <div style="margin-top:12px">
       <span class="badge">🤖 IracheBot Turismo</span>
-      <span class="badge">📍 Navarra</span>
+      <span class="badge">📍 ${
+        mercado === 'internacional' ? 'Internacional' :
+        mercado === 'espana'        ? 'España' :
+        'Navarra'
+      }</span>
     </div>
   </div>
   <div class="plan">${planHtml}</div>
@@ -324,7 +339,15 @@ export default function TurismoPage() {
         <div style={{ flex: 1 }}>
           <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: 15 }}>IracheBot Turismo</div>
           <div style={{ color: '#10b981', fontSize: 12 }}>
-            {botListo ? '● En línea · Turismo & Ocio Navarra' : '○ Conectando...'}
+            {botListo
+              ? `● En línea · ${
+                  mercado === 'navarra'       ? '🏔️ Navarra' :
+                  mercado === 'internacional' ? '🌍 Internacional' :
+                  mercado === 'espana'        ? '🇪🇸 España' :
+                  '🌍 Turismo & Ocio'
+                }`
+              : '○ Conectando...'
+            }
           </div>
         </div>
 
@@ -456,7 +479,37 @@ export default function TurismoPage() {
             ))}
           </div>
         )}
-
+        
+        {/* ── Botón reiniciar (solo en conversacion_libre) ── */}
+        {paso === 'conversacion_libre' && !planListo && !cargando && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+            <button
+              onClick={async () => {
+                await fetch(`${API}/turismo/sesion/${sesionId}`, { method: 'DELETE' })
+                setMensajes([])
+                setDatos({})
+                setPaso('bienvenida')
+                setMercado('auto')
+                setPlanListo(false)
+                setPlanTextoFinal('')
+                setBotListo(false)
+                iniciado.current = false
+                iniciarConversacion()
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid #334155',
+                color: '#475569', borderRadius: 20,
+                padding: '5px 16px', fontSize: 12,
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#64748b')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
+            >
+              🔄 Empezar de nuevo
+            </button>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
