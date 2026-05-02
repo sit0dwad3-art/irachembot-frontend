@@ -95,3 +95,29 @@ body {
   background-clip: text;
   animation: shimmer 4s linear infinite;
 }
+/* ── Admin UI sólida ── */
+@keyframes alertaIn {
+  from { opacity: 0; transform: translateX(110%) scale(0.92); }
+  to   { opacity: 1; transform: translateX(0)    scale(1);    }
+}
+@keyframes alertaOut {
+  from { opacity: 1; transform: translateX(0)    scale(1);    }
+  to   { opacity: 0; transform: translateX(110%) scale(0.92); }
+}
+@keyframes alertaProgress {
+  from { width: 100%; }
+  to   { width: 0%;   }
+}
+@keyframes rtPulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 6px rgba(52,211,153,0.7); }
+  50%       { opacity: 0.5; box-shadow: none; }
+}
+
+/* ── Slide-in legacy (por si algo lo usa) ── */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+.animate-slide-in {
+  animation: slide-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+}

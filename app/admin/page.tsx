@@ -66,10 +66,10 @@ const ESTADO_CONFIG: Record<string, {
   color: string; bg: string; border: string
   Icon: React.ElementType; label: string
 }> = {
-  pendiente:  { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)',  Icon: Clock,        label: 'Pendiente'  },
-  en_proceso: { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.25)',  Icon: Settings,     label: 'En proceso' },
-  resuelto:   { color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)',  Icon: CheckCircle2, label: 'Resuelto'   },
-  cerrado:    { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.25)', Icon: Lock,         label: 'Cerrado'    },
+  pendiente:  { color: '#fde68a', bg: '#1c1407', border: '#92400e', Icon: Clock,        label: 'Pendiente'  },
+  en_proceso: { color: '#bfdbfe', bg: '#0c1a2e', border: '#1e40af', Icon: Settings,     label: 'En proceso' },
+  resuelto:   { color: '#a7f3d0', bg: '#022c22', border: '#065f46', Icon: CheckCircle2, label: 'Resuelto'   },
+  cerrado:    { color: '#94a3b8', bg: '#0f172a', border: '#334155', Icon: Lock,         label: 'Cerrado'    },
 }
 
 const URGENCIA_CONFIG: Record<string, { color: string; Icon: React.ElementType; label: string }> = {
@@ -93,10 +93,10 @@ const CATEGORIA_CONFIG: Record<string, { Icon: React.ElementType; label: string;
 }
 
 const KPI_CONFIG = [
-  { key: 'total',      label: 'Total casos',  Icon: BarChart3,     color: '#6366f1', bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.2)'  },
-  { key: 'pendientes', label: 'Pendientes',   Icon: Clock,         color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.2)'  },
-  { key: 'urgentes',   label: 'Urgentes',     Icon: AlertTriangle, color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' },
-  { key: 'resueltos',  label: 'Resueltos',    Icon: CheckCircle2,  color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.2)'  },
+  { key: 'total',      label: 'Total casos', Icon: BarChart3,     color: '#a5b4fc', bg: '#1e1b4b', border: '#312e81' },
+  { key: 'pendientes', label: 'Pendientes',  Icon: Clock,         color: '#fde68a', bg: '#1c1407', border: '#78350f' },
+  { key: 'urgentes',   label: 'Urgentes',    Icon: AlertTriangle, color: '#fca5a5', bg: '#1c0a0a', border: '#7f1d1d' },
+  { key: 'resueltos',  label: 'Resueltos',   Icon: CheckCircle2,  color: '#6ee7b7', bg: '#022c22', border: '#064e3b' },
 ]
 
 // ══════════════════════════════════════════════════════════
@@ -1014,18 +1014,20 @@ const cargarDatosCompleto = useCallback(async () => {
         </div>
 
         {/* Botones — se agrupan en móvil */}
-        <div style={{
-          display: 'flex', gap: '0.4rem',
-          marginLeft: isMobile ? '0' : '0',
-          flexShrink: 0,
-        }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+
+          {/* Actualizar */}
           <button onClick={cargarDatosCompleto} disabled={cargando} style={{
-            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)',
-            borderRadius: '8px', padding: '0.42rem 0.7rem', color: '#6366f1',
-            cursor: 'pointer', fontSize: '0.78rem',
+            background: '#312e81', border: '1px solid #4338ca',
+            borderRadius: '8px', padding: '0.42rem 0.7rem',
+            color: '#c7d2fe', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '0.38rem',
-            transition: 'all 0.2s', whiteSpace: 'nowrap',
-          }}>
+            transition: 'background 0.15s', whiteSpace: 'nowrap',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#3730a3'}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#312e81'}
+          >
             {cargando
               ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
               : <RefreshCw size={12} />
@@ -1033,28 +1035,33 @@ const cargarDatosCompleto = useCallback(async () => {
             {!isMobile && 'Actualizar'}
           </button>
 
+          {/* Stats públicas */}
           {!isMobile && (
             <button onClick={() => router.push('/stats')} style={{
-              background: 'transparent', border: '1px solid #1e293b',
+              background: '#1e293b', border: '1px solid #334155',
               borderRadius: '8px', padding: '0.42rem 0.8rem',
-              color: '#475569', cursor: 'pointer', fontSize: '0.78rem',
+              color: '#94a3b8', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
               display: 'flex', alignItems: 'center', gap: '0.38rem',
-              transition: 'color 0.2s', whiteSpace: 'nowrap',
+              transition: 'background 0.15s', whiteSpace: 'nowrap',
             }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#334155'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#1e293b'}
             >
               <BarChart3 size={12} /> Stats públicas
             </button>
           )}
 
+          {/* Salir */}
           <button onClick={handleLogout} style={{
-            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
+            background: '#450a0a', border: '1px solid #7f1d1d',
             borderRadius: '8px', padding: '0.42rem 0.7rem',
-            color: '#f87171', cursor: 'pointer', fontSize: '0.78rem',
+            color: '#fca5a5', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '0.38rem',
-            transition: 'all 0.2s', whiteSpace: 'nowrap',
-          }}>
+            transition: 'background 0.15s', whiteSpace: 'nowrap',
+          }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d'}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#450a0a'}
+          >
             <LogOut size={12} />
             {!isMobile && 'Salir'}
           </button>
