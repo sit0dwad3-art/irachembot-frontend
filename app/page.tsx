@@ -229,7 +229,7 @@ export default function Home() {
             fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
             color: '#94a3b8', lineHeight: 1.7, maxWidth: '520px',
           }}>
-            Tu asistente inteligente para gestionar reclamaciones y descubrir Navarra.
+            Tu asistente inteligente para gestionar reclamaciones y descubrir viajando.
             <br />
             <span style={{ color: '#cbd5e1' }}>Rápido, gratuito y disponible 24/7.</span>
           </p>
@@ -299,7 +299,7 @@ export default function Home() {
               }}
             >
               <Compass size={19} />
-              Descubrir Navarra
+              Descubrir viajando
               <ChevronRight size={17} style={{
                 transform: btnHoverTur ? 'translateX(3px)' : 'translateX(0)',
                 transition: 'transform 0.25s',
@@ -713,7 +713,7 @@ export default function Home() {
                 <Compass size={26} color="white" />
               </div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 0.6rem', letterSpacing: '-0.02em' }}>
-                ¿Quieres descubrir Navarra?
+                ¿Quieres programar tu viaje?
               </h2>
               <p style={{ color: '#64748b', marginBottom: '1.75rem', fontSize: '0.875rem', lineHeight: 1.7 }}>
                 Diseñamos tu plan de viaje personalizado: destino, actividades, hospedaje y gastronomía.
