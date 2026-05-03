@@ -125,169 +125,129 @@ const SECTORS = [
   { emoji: '🏨', label: 'Turismo',    color: '#16a34a' },
   { emoji: '📦', label: 'E-commerce', color: '#0891b2' },
 ]
-
 // ── Robot Head Animado ────────────────────────────────────────────────────────
 function RobotHead() {
-  const anchorRef = useRef<HTMLDivElement>(null)   // punto fijo en el DOM (hero)
-  const robotRef  = useRef<HTMLDivElement>(null)   // el robot que se mueve
-
+  const robotRef = useRef<HTMLDivElement>(null)
   const [gesture,  setGesture]  = useState('')
   const [rotation, setRotation] = useState({ x: 0, y: 0 })
   const [scrolled, setScrolled] = useState(false)
 
-  // ── Posición fija del robot cuando está en modo "fixed" ──
-  // Guardamos la posición del anchor en pantalla al hacer scroll
-  const anchorScreenPos = useRef({ top: 0, left: 0 })
+  // Ajusta este valor para subir/bajar en el hero (0.0 = top, 0.5 = mitad)
+  const HERO_TOP  = 0.22
+  const HERO_SIZE = 120
+  const MINI_SIZE = 75
 
-  // 1️⃣ SCROLL — detectar y guardar posición del anchor
+  // 1️⃣ SCROLL
   useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 100
-      setScrolled(isScrolled)
-
-      // Guardar posición actual del anchor en pantalla
-      if (anchorRef.current) {
-        const rect = anchorRef.current.getBoundingClientRect()
-        anchorScreenPos.current = {
-          top:  rect.top  + window.scrollY,
-          left: rect.left + rect.width / 2,
-        }
-      }
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 150)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // 2️⃣ SEGUIR CURSOR — inclinación 3D suave (solo cuando está en hero)
+  // 2️⃣ CURSOR — inclinación 3D (solo en hero)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (scrolled) return
-      if (!robotRef.current) return
-      const rect    = robotRef.current.getBoundingClientRect()
-      const centerX = rect.left + rect.width  / 2
-      const centerY = rect.top  + rect.height / 2
-      const angleX  = ((e.clientY - centerY) / window.innerHeight) * 15
-      const angleY  = ((e.clientX - centerX) / window.innerWidth)  * -15
-      setRotation({ x: angleX, y: angleY })
+      if (scrolled || !robotRef.current) return
+      const cx = window.innerWidth  / 2
+      const cy = window.innerHeight * HERO_TOP + HERO_SIZE / 2
+      const ax = ((e.clientY - cy) / window.innerHeight) * 15
+      const ay = ((e.clientX - cx) / window.innerWidth)  * -15
+      setRotation({ x: ax, y: ay })
     }
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [scrolled])
 
-  // 3️⃣ GESTOS CADA 5 SEGUNDOS (solo cuando está en hero)
+  // 3️⃣ GESTOS cada 5s (solo en hero)
   useEffect(() => {
-    const gestures = ['tilt-left', 'tilt-right', 'nod', 'blink']
-    const interval = setInterval(() => {
-      if (!scrolled) {
-        const g = gestures[Math.floor(Math.random() * gestures.length)]
-        setGesture(g)
-        setTimeout(() => setGesture(''), 700)
-      }
+    const list = ['tilt-left', 'tilt-right', 'nod', 'blink']
+    const id = setInterval(() => {
+      if (scrolled) return
+      const g = list[Math.floor(Math.random() * list.length)]
+      setGesture(g)
+      setTimeout(() => setGesture(''), 700)
     }, 5000)
-    return () => clearInterval(interval)
+    return () => clearInterval(id)
   }, [scrolled])
 
   return (
     <>
       <style>{`
-        @keyframes tilt-left {
-          0%, 100% { transform: rotate(0deg); }
-          50%       { transform: rotate(-10deg); }
-        }
-        @keyframes tilt-right {
-          0%, 100% { transform: rotate(0deg); }
-          50%       { transform: rotate(10deg); }
-        }
-        @keyframes nod {
-          0%, 100% { transform: translateY(0px); }
-          40%       { transform: translateY(-10px); }
-          70%       { transform: translateY(4px); }
-        }
-        @keyframes blink {
-          0%, 90%, 100% { filter: drop-shadow(0 0 30px rgba(99,102,241,0.5)) brightness(1); }
-          95%            { filter: drop-shadow(0 0 30px rgba(99,102,241,0.5)) brightness(0.15); }
+        @keyframes tilt-left  { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(-10deg)} }
+        @keyframes tilt-right { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(10deg)}  }
+        @keyframes nod        { 0%,100%{transform:translateY(0)}  40%{transform:translateY(-10px)} 70%{transform:translateY(4px)} }
+        @keyframes blink      {
+          0%,89%,100% { filter: drop-shadow(0 0 28px rgba(99,102,241,.55)) brightness(1);   }
+          95%         { filter: drop-shadow(0 0 28px rgba(99,102,241,.55)) brightness(0.1); }
         }
         @keyframes sway {
-          0%   { transform: rotate(-5deg) translateY(0px);  }
+          0%   { transform: rotate(-5deg) translateY(0);    }
           25%  { transform: rotate(5deg)  translateY(-5px); }
-          50%  { transform: rotate(-3deg) translateY(0px);  }
+          50%  { transform: rotate(-3deg) translateY(0);    }
           75%  { transform: rotate(3deg)  translateY(-3px); }
-          100% { transform: rotate(-5deg) translateY(0px);  }
+          100% { transform: rotate(-5deg) translateY(0);    }
         }
-        @keyframes slide-to-corner {
-          from { opacity: 0; transform: scale(0.6); }
-          to   { opacity: 1; transform: scale(1);   }
+        @keyframes pop-in {
+          0%   { opacity: 0; transform: scale(0.4) translateY(20px); }
+          70%  { transform: scale(1.1); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .robot-gesture-tilt-left  { animation: tilt-left  0.6s ease !important; }
-        .robot-gesture-tilt-right { animation: tilt-right 0.6s ease !important; }
-        .robot-gesture-nod        { animation: nod        0.6s ease !important; }
-        .robot-gesture-blink      { animation: blink      0.4s ease !important; }
-        .robot-sway               { animation: sway 2.5s ease-in-out infinite !important; }
-        .robot-appear             { animation: slide-to-corner 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+        .rg-tilt-left  { animation: tilt-left  .6s ease !important; }
+        .rg-tilt-right { animation: tilt-right .6s ease !important; }
+        .rg-nod        { animation: nod        .6s ease !important; }
+        .rg-blink      { animation: blink      .4s ease !important; }
+        .rg-sway       { animation: sway 2.5s ease-in-out infinite !important; }
+        .rg-popin      { animation: pop-in .45s cubic-bezier(.34,1.56,.64,1) forwards; }
       `}</style>
 
-      {/* ── Placeholder invisible que ocupa el espacio en el hero ── */}
       <div
-        ref={anchorRef}
-        style={{ width: '120px', height: '120px', marginBottom: '1.5rem' }}
-      />
+        ref={robotRef}
+        className={scrolled ? 'rg-sway rg-popin' : (gesture ? `rg-${gesture}` : '')}
+        onClick={scrolled ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : undefined}
+        title={scrolled ? 'Volver arriba' : ''}
+        style={{
+          position: 'fixed',
 
-      {/* ── El robot real: en hero = absolute sobre el anchor, scrolled = fixed esquina ── */}
-      {!scrolled ? (
-        // MODO HERO — se queda en su sitio entre el badge y el título
-        <div
-          ref={robotRef}
-          className={gesture ? `robot-gesture-${gesture}` : ''}
-          style={{
-            position:   'absolute',          // relativo al contenedor padre
-            width:      '120px',
-            height:     '120px',
-            marginTop:  '-136px',            // sube exactamente sobre el placeholder
-            marginLeft: '-60px',             // centra horizontalmente
-            left:       '50%',
-            zIndex:     10,
-            transform:  `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-            filter:     'drop-shadow(0 0 30px rgba(99,102,241,0.5))',
-            transition: 'transform 0.08s ease',
-            cursor:     'default',
-          }}
-        >
-          <img
-            src="/bot-icon-new.png"
-            alt="IracheBot"
-            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
-          />
-        </div>
-      ) : (
-        // MODO SCROLL — fixed en esquina inferior derecha, balanceándose
-        <div
-          ref={robotRef}
-          className="robot-sway robot-appear"
-          style={{
-            position: 'fixed',
-            bottom:   '28px',
-            right:    '28px',
-            width:    '80px',
-            height:   '80px',
-            zIndex:   9999,
-            filter:   'drop-shadow(0 0 20px rgba(99,102,241,0.6))',
-            cursor:   'pointer',
-          }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
-          onMouseLeave={e => (e.currentTarget.style.transform = '')}
-          title="Volver arriba"
-        >
-          <img
-            src="/bot-icon-new.png"
-            alt="IracheBot"
-            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
-          />
-        </div>
-      )}
+          // ── HERO: centrado, a HERO_TOP% de la pantalla ──
+          left:   scrolled ? 'auto'                              : `calc(50% - ${HERO_SIZE / 2}px)`,
+          right:  scrolled ? '28px'                             : 'auto',
+          top:    scrolled ? 'auto'                             : `${HERO_TOP * 100}vh`,
+          bottom: scrolled ? '28px'                             : 'auto',
+
+          width:  `${scrolled ? MINI_SIZE : HERO_SIZE}px`,
+          height: `${scrolled ? MINI_SIZE : HERO_SIZE}px`,
+
+          zIndex:  9999,
+          cursor:  scrolled ? 'pointer' : 'default',
+          filter:  'drop-shadow(0 0 28px rgba(99,102,241,0.55))',
+
+          transform: !scrolled
+            ? `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
+            : undefined,
+
+          transition: [
+            'left    .55s cubic-bezier(.34,1.56,.64,1)',
+            'right   .55s cubic-bezier(.34,1.56,.64,1)',
+            'top     .55s cubic-bezier(.34,1.56,.64,1)',
+            'bottom  .55s cubic-bezier(.34,1.56,.64,1)',
+            'width   .4s ease',
+            'height  .4s ease',
+            'transform .08s ease',
+          ].join(', '),
+
+          willChange: 'left, right, top, bottom, transform',
+        }}
+      >
+        <img
+          src="/bot-icon-new.png"
+          alt="IracheBot"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+        />
+      </div>
     </>
   )
 }
+
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Home() {
