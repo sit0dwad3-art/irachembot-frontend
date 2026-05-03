@@ -133,7 +133,7 @@ function RobotHead() {
   const [scrolled, setScrolled] = useState(false)
 
   // Ajusta este valor para subir/bajar en el hero (0.0 = top, 0.5 = mitad)
-  const HERO_TOP  = 0.22
+  const HERO_TOP  = 0.18
   const HERO_SIZE = 120
   const MINI_SIZE = 75
 
