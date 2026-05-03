@@ -125,7 +125,137 @@ const SECTORS = [
   { emoji: '🏨', label: 'Turismo',    color: '#16a34a' },
   { emoji: '📦', label: 'E-commerce', color: '#0891b2' },
 ]
+// ── Robot Head Animado ────────────────────────────────────────────────────────
+function RobotHead() {
+  const robotRef = useRef<HTMLDivElement>(null)
+  const [minimized, setMinimized] = useState(false)
+  const [gesture, setGesture] = useState('')
+  const [rotation, setRotation] = useState({ x: 0, y: 0 })
 
+  // 1️⃣ SEGUIR CURSOR
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!robotRef.current) return
+      const rect = robotRef.current.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const angleX = ((e.clientY - centerY) / window.innerHeight) * 12
+      const angleY = ((e.clientX - centerX) / window.innerWidth) * -12
+      setRotation({ x: angleX, y: angleY })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
+  // 2️⃣ SCROLL → minimizar
+  useEffect(() => {
+    const handleScroll = () => {
+      setMinimized(window.scrollY > 300)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // 3️⃣ GESTOS CADA 5 SEGUNDOS
+  useEffect(() => {
+    const gestures = ['tilt-left', 'tilt-right', 'nod', 'blink']
+    const interval = setInterval(() => {
+      const g = gestures[Math.floor(Math.random() * gestures.length)]
+      setGesture(g)
+      setTimeout(() => setGesture(''), 700)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <>
+      {/* ── Estilos de animaciones ── */}
+      <style>{`
+        @keyframes tilt-left {
+          0%, 100% { transform: rotate(0deg); }
+          50%       { transform: rotate(-10deg); }
+        }
+        @keyframes tilt-right {
+          0%, 100% { transform: rotate(0deg); }
+          50%       { transform: rotate(10deg); }
+        }
+        @keyframes nod {
+          0%, 100% { transform: translateY(0px); }
+          40%       { transform: translateY(-12px); }
+          70%       { transform: translateY(4px); }
+        }
+        @keyframes blink {
+          0%, 90%, 100% { filter: brightness(1); }
+          95%            { filter: brightness(0.2); }
+        }
+        @keyframes bounce-in {
+          0%   { transform: scale(1.2); }
+          60%  { transform: scale(0.9); }
+          100% { transform: scale(1); }
+        }
+        .robot-gesture-tilt-left  { animation: tilt-left  0.6s ease; }
+        .robot-gesture-tilt-right { animation: tilt-right 0.6s ease; }
+        .robot-gesture-nod        { animation: nod        0.6s ease; }
+        .robot-gesture-blink      { animation: blink      0.4s ease; }
+        .robot-minimized-bounce   { animation: bounce-in  0.4s ease; }
+      `}</style>
+
+      {/* ── Versión HERO (centrada, grande) ── */}
+      {!minimized && (
+        <div
+          ref={robotRef}
+          className={gesture ? `robot-gesture-${gesture}` : ''}
+          style={{
+            width: '140px',
+            height: '140px',
+            marginBottom: '2rem',
+            perspective: '600px',
+            cursor: 'none',
+            transition: 'transform 0.1s ease',
+            transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+            filter: 'drop-shadow(0 0 30px rgba(99,102,241,0.5))',
+          }}
+        >
+          <img
+            src="/bot-icon-new.png"
+            alt="IracheBot"
+            width={140}
+            height={140}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        </div>
+      )}
+
+      {/* ── Versión MINIMIZADA (esquina inferior derecha) ── */}
+      {minimized && (
+        <div
+          className="robot-minimized-bounce"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            width: '72px',
+            height: '72px',
+            zIndex: 999,
+            cursor: 'pointer',
+            filter: 'drop-shadow(0 0 16px rgba(99,102,241,0.6))',
+            transition: 'transform 0.3s ease',
+          }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
+          onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+          title="Volver arriba"
+        >
+          <img
+            src="/bot-icon-new.png"
+            alt="IracheBot"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        </div>
+      )}
+    </>
+  )
+}
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter()
@@ -200,16 +330,8 @@ export default function Home() {
             SERVICIO DE CONSUMO DE NAVARRA · EN LÍNEA
           </div>
 
-          {/* Logo */}
-          <div style={{
-            width: '88px', height: '88px', borderRadius: '24px',
-            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: '2rem',
-            boxShadow: '0 0 60px rgba(99,102,241,0.4), 0 0 120px rgba(99,102,241,0.15)',
-          }}>
-            <img src="/bot-icon.svg" alt="IracheBot" width={56} height={56} />
-          </div>
+          {/* ── Robot Head con animaciones ── */}
+          <RobotHead />
 
           {/* Título */}
           <h1 style={{
