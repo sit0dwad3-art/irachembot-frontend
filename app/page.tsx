@@ -125,16 +125,43 @@ const SECTORS = [
   { emoji: '🏨', label: 'Turismo',    color: '#16a34a' },
   { emoji: '📦', label: 'E-commerce', color: '#0891b2' },
 ]
+
 // ── Robot Head Animado ────────────────────────────────────────────────────────
 function RobotHead() {
-  const robotRef = useRef<HTMLDivElement>(null)
-  const [gesture, setGesture]   = useState('')
+  const anchorRef = useRef<HTMLDivElement>(null)   // punto fijo en el DOM (hero)
+  const robotRef  = useRef<HTMLDivElement>(null)   // el robot que se mueve
+
+  const [gesture,  setGesture]  = useState('')
   const [rotation, setRotation] = useState({ x: 0, y: 0 })
   const [scrolled, setScrolled] = useState(false)
 
-  // 1️⃣ SEGUIR CURSOR — inclinación 3D suave
+  // ── Posición fija del robot cuando está en modo "fixed" ──
+  // Guardamos la posición del anchor en pantalla al hacer scroll
+  const anchorScreenPos = useRef({ top: 0, left: 0 })
+
+  // 1️⃣ SCROLL — detectar y guardar posición del anchor
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 100
+      setScrolled(isScrolled)
+
+      // Guardar posición actual del anchor en pantalla
+      if (anchorRef.current) {
+        const rect = anchorRef.current.getBoundingClientRect()
+        anchorScreenPos.current = {
+          top:  rect.top  + window.scrollY,
+          left: rect.left + rect.width / 2,
+        }
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // 2️⃣ SEGUIR CURSOR — inclinación 3D suave (solo cuando está en hero)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (scrolled) return
       if (!robotRef.current) return
       const rect    = robotRef.current.getBoundingClientRect()
       const centerX = rect.left + rect.width  / 2
@@ -145,18 +172,9 @@ function RobotHead() {
     }
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+  }, [scrolled])
 
-  // 2️⃣ SCROLL — se desplaza al lateral + balanceo, vuelve al subir
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 200)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // 3️⃣ GESTOS CADA 5 SEGUNDOS (solo cuando está arriba)
+  // 3️⃣ GESTOS CADA 5 SEGUNDOS (solo cuando está en hero)
   useEffect(() => {
     const gestures = ['tilt-left', 'tilt-right', 'nod', 'blink']
     const interval = setInterval(() => {
@@ -189,64 +207,84 @@ function RobotHead() {
           0%, 90%, 100% { filter: drop-shadow(0 0 30px rgba(99,102,241,0.5)) brightness(1); }
           95%            { filter: drop-shadow(0 0 30px rgba(99,102,241,0.5)) brightness(0.15); }
         }
-
-        /* Balanceo mientras la página está desplazada */
         @keyframes sway {
-          0%   { transform: rotate(-6deg) translateY(0px); }
-          25%  { transform: rotate(6deg)  translateY(-6px); }
-          50%  { transform: rotate(-4deg) translateY(0px); }
-          75%  { transform: rotate(4deg)  translateY(-4px); }
-          100% { transform: rotate(-6deg) translateY(0px); }
+          0%   { transform: rotate(-5deg) translateY(0px);  }
+          25%  { transform: rotate(5deg)  translateY(-5px); }
+          50%  { transform: rotate(-3deg) translateY(0px);  }
+          75%  { transform: rotate(3deg)  translateY(-3px); }
+          100% { transform: rotate(-5deg) translateY(0px);  }
         }
-
+        @keyframes slide-to-corner {
+          from { opacity: 0; transform: scale(0.6); }
+          to   { opacity: 1; transform: scale(1);   }
+        }
         .robot-gesture-tilt-left  { animation: tilt-left  0.6s ease !important; }
         .robot-gesture-tilt-right { animation: tilt-right 0.6s ease !important; }
         .robot-gesture-nod        { animation: nod        0.6s ease !important; }
         .robot-gesture-blink      { animation: blink      0.4s ease !important; }
         .robot-sway               { animation: sway 2.5s ease-in-out infinite !important; }
+        .robot-appear             { animation: slide-to-corner 0.4s cubic-bezier(0.34,1.56,0.64,1); }
       `}</style>
 
+      {/* ── Placeholder invisible que ocupa el espacio en el hero ── */}
       <div
-        ref={robotRef}
-        className={`
-          ${scrolled ? 'robot-sway' : (gesture ? `robot-gesture-${gesture}` : '')}
-        `}
-        style={{
-          // ── Posición: fixed para que siempre sea visible ──
-          position:  'fixed',
-          // ── Cuando scrolled: se va al lateral derecho ──
-          // ── Cuando arriba:   vuelve a su posición hero ──
-          right: scrolled ? '32px'   : '50%',
-          top:   scrolled ? '80px'   : '38vh',
+        ref={anchorRef}
+        style={{ width: '120px', height: '120px', marginBottom: '1.5rem' }}
+      />
 
-          // Corrección para centrarlo horizontalmente cuando está arriba
-          marginRight: scrolled ? '0' : '-70px',
-
-          width:  '140px',
-          height: '140px',
-          zIndex: 9999,
-
-          // Rotación 3D siguiendo cursor (solo cuando está arriba)
-          transform: !scrolled
-            ? `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
-            : undefined,
-
-          filter:     'drop-shadow(0 0 30px rgba(99,102,241,0.5))',
-
-          // Transición suave al desplazarse al lateral
-          transition: 'right 0.6s cubic-bezier(0.34,1.56,0.64,1), top 0.6s cubic-bezier(0.34,1.56,0.64,1), margin 0.6s ease, transform 0.08s ease',
-          willChange: 'right, top, transform',
-          cursor:     'pointer',
-        }}
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        title="Volver arriba"
-      >
-        <img
-          src="/bot-icon-new.png"
-          alt="IracheBot"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
-        />
-      </div>
+      {/* ── El robot real: en hero = absolute sobre el anchor, scrolled = fixed esquina ── */}
+      {!scrolled ? (
+        // MODO HERO — se queda en su sitio entre el badge y el título
+        <div
+          ref={robotRef}
+          className={gesture ? `robot-gesture-${gesture}` : ''}
+          style={{
+            position:   'absolute',          // relativo al contenedor padre
+            width:      '120px',
+            height:     '120px',
+            marginTop:  '-136px',            // sube exactamente sobre el placeholder
+            marginLeft: '-60px',             // centra horizontalmente
+            left:       '50%',
+            zIndex:     10,
+            transform:  `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+            filter:     'drop-shadow(0 0 30px rgba(99,102,241,0.5))',
+            transition: 'transform 0.08s ease',
+            cursor:     'default',
+          }}
+        >
+          <img
+            src="/bot-icon-new.png"
+            alt="IracheBot"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+          />
+        </div>
+      ) : (
+        // MODO SCROLL — fixed en esquina inferior derecha, balanceándose
+        <div
+          ref={robotRef}
+          className="robot-sway robot-appear"
+          style={{
+            position: 'fixed',
+            bottom:   '28px',
+            right:    '28px',
+            width:    '80px',
+            height:   '80px',
+            zIndex:   9999,
+            filter:   'drop-shadow(0 0 20px rgba(99,102,241,0.6))',
+            cursor:   'pointer',
+          }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
+          onMouseLeave={e => (e.currentTarget.style.transform = '')}
+          title="Volver arriba"
+        >
+          <img
+            src="/bot-icon-new.png"
+            alt="IracheBot"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+          />
+        </div>
+      )}
     </>
   )
 }
@@ -254,9 +292,9 @@ function RobotHead() {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter()
-  const [btnHoverRec,  setBtnHoverRec]  = useState(false)
-  const [btnHoverTur,  setBtnHoverTur]  = useState(false)
-  const [visible,      setVisible]      = useState(false)
+  const [btnHoverRec, setBtnHoverRec] = useState(false)
+  const [btnHoverTur, setBtnHoverTur] = useState(false)
+  const [visible,     setVisible]     = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100)
@@ -306,6 +344,7 @@ export default function Home() {
           alignItems: 'center', justifyContent: 'center',
           padding: '2rem', textAlign: 'center',
           maxWidth: '760px', margin: '0 auto',
+          position: 'relative',   // ← necesario para el absolute del robot
         }}>
 
           {/* Badge */}
@@ -314,7 +353,7 @@ export default function Home() {
             background: 'rgba(79,70,229,0.15)',
             border: '1px solid rgba(99,102,241,0.3)',
             borderRadius: '100px', padding: '6px 16px',
-            marginBottom: '2rem', fontSize: '0.78rem',
+            marginBottom: '1.5rem', fontSize: '0.78rem',
             color: '#a5b4fc', letterSpacing: '0.05em', fontWeight: 600,
           }}>
             <span style={{
@@ -325,7 +364,7 @@ export default function Home() {
             SERVICIO DE CONSUMO DE NAVARRA · EN LÍNEA
           </div>
 
-          {/* ── Robot Head con animaciones ── */}
+          {/* ── Robot Head — aparece aquí entre badge y título ── */}
           <RobotHead />
 
           {/* Título */}
@@ -364,8 +403,6 @@ export default function Home() {
             display: 'flex', gap: '16px', flexWrap: 'wrap',
             justifyContent: 'center', marginBottom: '1rem',
           }}>
-
-            {/* Botón Reclamación */}
             <button
               onClick={() => router.push('/chat')}
               onMouseEnter={() => setBtnHoverRec(true)}
@@ -376,8 +413,7 @@ export default function Home() {
                   : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                 border: 'none', borderRadius: '18px',
                 padding: '1.1rem 2.2rem', color: 'white',
-                fontSize: '1rem', fontWeight: 700,
-                cursor: 'pointer',
+                fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '0.6rem',
                 boxShadow: btnHoverRec
                   ? '0 16px 48px rgba(99,102,241,0.55)'
@@ -394,7 +430,6 @@ export default function Home() {
               }} />
             </button>
 
-            {/* Botón Turismo */}
             <button
               onClick={() => router.push('/turismo')}
               onMouseEnter={() => setBtnHoverTur(true)}
@@ -405,8 +440,7 @@ export default function Home() {
                   : 'linear-gradient(135deg, #059669, #10b981)',
                 border: 'none', borderRadius: '18px',
                 padding: '1.1rem 2.2rem', color: 'white',
-                fontSize: '1rem', fontWeight: 700,
-                cursor: 'pointer',
+                fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '0.6rem',
                 boxShadow: btnHoverTur
                   ? '0 16px 48px rgba(5,150,105,0.55)'
@@ -424,13 +458,11 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Etiquetas bajo los botones */}
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <span style={{ color: '#475569', fontSize: '0.75rem' }}>🔴 Reclamaciones de consumo</span>
             <span style={{ color: '#475569', fontSize: '0.75rem' }}>🟢 Turismo, ocio y actividades</span>
           </div>
 
-          {/* Link admin */}
           <button
             onClick={() => router.push('/admin')}
             style={{
@@ -446,7 +478,7 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            MÓDULOS — nueva sección visual
+            MÓDULOS
         ══════════════════════════════════════════════════ */}
         <section style={{
           width: '100%', maxWidth: '900px',
@@ -455,14 +487,12 @@ export default function Home() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '1.5rem',
         }}>
-          {/* Card Reclamaciones */}
           <div
             onClick={() => router.push('/chat')}
             style={{
               background: 'linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.08))',
               border: '1px solid rgba(99,102,241,0.25)',
-              borderRadius: '24px', padding: '2rem',
-              cursor: 'pointer',
+              borderRadius: '24px', padding: '2rem', cursor: 'pointer',
               transition: 'transform 0.3s, box-shadow 0.3s, border-color 0.3s',
             }}
             onMouseEnter={e => {
@@ -482,14 +512,11 @@ export default function Home() {
               width: '52px', height: '52px', borderRadius: '16px',
               background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '1.25rem',
-              boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
+              marginBottom: '1.25rem', boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
             }}>
               <MessageSquare size={24} color="white" />
             </div>
-            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 800 }}>
-              🔴 Reclamaciones
-            </h3>
+            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 800 }}>🔴 Reclamaciones</h3>
             <p style={{ margin: '0 0 1.25rem', color: '#64748b', fontSize: '0.875rem', lineHeight: 1.6 }}>
               Gestiona tu reclamación como consumidor en Navarra. Telefonía, energía, banca, turismo y más.
             </p>
@@ -497,21 +524,18 @@ export default function Home() {
               {['📱 Telefonía', '⚡ Energía', '🏦 Banca', '✈️ Transporte'].map(tag => (
                 <span key={tag} style={{
                   background: 'rgba(79,70,229,0.15)', border: '1px solid rgba(99,102,241,0.2)',
-                  borderRadius: '20px', padding: '3px 10px',
-                  fontSize: '0.72rem', color: '#a5b4fc',
+                  borderRadius: '20px', padding: '3px 10px', fontSize: '0.72rem', color: '#a5b4fc',
                 }}>{tag}</span>
               ))}
             </div>
           </div>
 
-          {/* Card Turismo */}
           <div
             onClick={() => router.push('/turismo')}
             style={{
               background: 'linear-gradient(135deg, rgba(5,150,105,0.12), rgba(16,185,129,0.06))',
               border: '1px solid rgba(5,150,105,0.25)',
-              borderRadius: '24px', padding: '2rem',
-              cursor: 'pointer',
+              borderRadius: '24px', padding: '2rem', cursor: 'pointer',
               transition: 'transform 0.3s, box-shadow 0.3s, border-color 0.3s',
             }}
             onMouseEnter={e => {
@@ -531,14 +555,11 @@ export default function Home() {
               width: '52px', height: '52px', borderRadius: '16px',
               background: 'linear-gradient(135deg, #059669, #10b981)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '1.25rem',
-              boxShadow: '0 8px 24px rgba(5,150,105,0.35)',
+              marginBottom: '1.25rem', boxShadow: '0 8px 24px rgba(5,150,105,0.35)',
             }}>
               <Compass size={24} color="white" />
             </div>
-            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 800 }}>
-              🟢 Turismo & Ocio
-            </h3>
+            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 800 }}>🟢 Turismo & Ocio</h3>
             <p style={{ margin: '0 0 1.25rem', color: '#64748b', fontSize: '0.875rem', lineHeight: 1.6 }}>
               Descubre Navarra con un plan personalizado. Destinos, actividades, hospedaje y gastronomía.
             </p>
@@ -546,8 +567,7 @@ export default function Home() {
               {['🏔️ Pirineo', '🍷 Ribera', '🌿 Irati', '🛤️ Camino'].map(tag => (
                 <span key={tag} style={{
                   background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.2)',
-                  borderRadius: '20px', padding: '3px 10px',
-                  fontSize: '0.72rem', color: '#6ee7b7',
+                  borderRadius: '20px', padding: '3px 10px', fontSize: '0.72rem', color: '#6ee7b7',
                 }}>{tag}</span>
               ))}
             </div>
@@ -558,21 +578,17 @@ export default function Home() {
             STATS
         ══════════════════════════════════════════════════ */}
         <section style={{
-          width: '100%', maxWidth: '900px',
-          padding: '0 2rem 5rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1.5rem',
+          width: '100%', maxWidth: '900px', padding: '0 2rem 5rem',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem',
         }}>
           {[
-            { Icon: Users,      color: '#6366f1', value: 1247, suffix: '+', label: 'Usuarios atendidos'    },
-            { Icon: TrendingUp, color: '#22c55e', value: 94,   suffix: '%', label: 'Tasa de resolución'    },
-            { Icon: Clock,      color: '#60a5fa', value: 48,   suffix: 'h', label: 'Tiempo medio respuesta'},
-            { Icon: MapPin,     color: '#10b981', value: 5,    suffix: '',  label: 'Destinos en Navarra'   },
+            { Icon: Users,      color: '#6366f1', value: 1247, suffix: '+', label: 'Usuarios atendidos'     },
+            { Icon: TrendingUp, color: '#22c55e', value: 94,   suffix: '%', label: 'Tasa de resolución'     },
+            { Icon: Clock,      color: '#60a5fa', value: 48,   suffix: 'h', label: 'Tiempo medio respuesta' },
+            { Icon: MapPin,     color: '#10b981', value: 5,    suffix: '',  label: 'Destinos en Navarra'    },
           ].map(({ Icon, color, value, suffix, label }) => (
             <div key={label} style={{
-              background: 'rgba(15,23,42,0.7)',
-              border: '1px solid rgba(30,41,59,0.9)',
+              background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(30,41,59,0.9)',
               borderRadius: '20px', padding: '1.75rem 1.5rem',
               textAlign: 'center', backdropFilter: 'blur(16px)',
               transition: 'border-color 0.3s, transform 0.3s',
@@ -608,34 +624,25 @@ export default function Home() {
             FEATURES
         ══════════════════════════════════════════════════ */}
         <section style={{ width: '100%', maxWidth: '900px', padding: '0 2rem 5rem' }}>
-          <h2 style={{
-            textAlign: 'center', fontSize: '1.8rem', fontWeight: 800,
-            marginBottom: '0.5rem', letterSpacing: '-0.03em',
-          }}>
-            ¿Por qué <span style={{
-              background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>IracheBot?</span>
+          <h2 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>
+            ¿Por qué <span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>IracheBot?</span>
           </h2>
           <p style={{ textAlign: 'center', color: '#475569', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
             Diseñado para que cualquier ciudadano de Navarra pueda reclamar y explorar sin complicaciones.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
             {[
-              { Icon: Zap,          color: '#fbbf24', title: 'Proceso en 2 minutos',      desc: 'Guiado paso a paso. Sin formularios complejos ni burocracia.' },
-              { Icon: Shield,       color: '#34d399', title: 'Datos 100% protegidos',     desc: 'Cifrado de extremo a extremo. Tu información nunca se comparte.' },
-              { Icon: Clock,        color: '#60a5fa', title: 'Disponible 24/7',           desc: 'Reclama o planifica cuando quieras, desde cualquier dispositivo.' },
-              { Icon: MessageSquare,color: '#a78bfa', title: 'Respuesta inteligente',     desc: 'IA entrenada en normativa de consumo y turismo de Navarra.' },
-              { Icon: Compass,      color: '#10b981', title: 'Planes de viaje en PDF',    desc: 'Recibe tu plan personalizado por email con destinos, rutas y más.' },
-              { Icon: Award,        color: '#fb923c', title: 'Totalmente gratuito',       desc: 'Sin costes ocultos. El servicio es público y accesible.' },
+              { Icon: Zap,           color: '#fbbf24', title: 'Proceso en 2 minutos',   desc: 'Guiado paso a paso. Sin formularios complejos ni burocracia.' },
+              { Icon: Shield,        color: '#34d399', title: 'Datos 100% protegidos',  desc: 'Cifrado de extremo a extremo. Tu información nunca se comparte.' },
+              { Icon: Clock,         color: '#60a5fa', title: 'Disponible 24/7',        desc: 'Reclama o planifica cuando quieras, desde cualquier dispositivo.' },
+              { Icon: MessageSquare, color: '#a78bfa', title: 'Respuesta inteligente',  desc: 'IA entrenada en normativa de consumo y turismo de Navarra.' },
+              { Icon: Compass,       color: '#10b981', title: 'Planes de viaje en PDF', desc: 'Recibe tu plan personalizado por email con destinos, rutas y más.' },
+              { Icon: Award,         color: '#fb923c', title: 'Totalmente gratuito',    desc: 'Sin costes ocultos. El servicio es público y accesible.' },
             ].map(({ Icon, color, title, desc }) => (
               <div key={title} style={{
-                background: 'rgba(15,23,42,0.6)',
-                border: '1px solid rgba(30,41,59,0.8)',
-                borderRadius: '18px', padding: '1.5rem',
-                backdropFilter: 'blur(12px)',
-                transition: 'border-color 0.3s, transform 0.3s, box-shadow 0.3s',
-                cursor: 'default',
+                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(30,41,59,0.8)',
+                borderRadius: '18px', padding: '1.5rem', backdropFilter: 'blur(12px)',
+                transition: 'border-color 0.3s, transform 0.3s, box-shadow 0.3s', cursor: 'default',
               }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLDivElement
@@ -653,8 +660,7 @@ export default function Home() {
                 <div style={{
                   width: '44px', height: '44px', borderRadius: '13px',
                   background: `${color}18`, border: `1px solid ${color}30`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: '1rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem',
                 }}>
                   <Icon size={20} color={color} />
                 </div>
@@ -670,10 +676,7 @@ export default function Home() {
         ══════════════════════════════════════════════════ */}
         <section style={{ width: '100%', maxWidth: '900px', padding: '0 2rem 5rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>
-            Sectores que <span style={{
-              background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>cubrimos</span>
+            Sectores que <span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>cubrimos</span>
           </h2>
           <p style={{ color: '#475569', marginBottom: '2rem', fontSize: '0.95rem' }}>
             Desde telefonía hasta turismo — si tienes una reclamación, estamos aquí.
@@ -708,14 +711,8 @@ export default function Home() {
             TESTIMONIOS
         ══════════════════════════════════════════════════ */}
         <section style={{ width: '100%', maxWidth: '900px', padding: '0 2rem 5rem' }}>
-          <h2 style={{
-            textAlign: 'center', fontSize: '1.8rem', fontWeight: 800,
-            marginBottom: '0.5rem', letterSpacing: '-0.03em',
-          }}>
-            Lo que dicen nuestros <span style={{
-              background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>usuarios</span>
+          <h2 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>
+            Lo que dicen nuestros <span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>usuarios</span>
           </h2>
           <p style={{ textAlign: 'center', color: '#475569', marginBottom: '2rem', fontSize: '0.95rem' }}>
             Casos reales resueltos con IracheBot.
@@ -723,10 +720,8 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
             {TESTIMONIALS.map(({ name, sector, stars, text }) => (
               <div key={name} style={{
-                background: 'rgba(15,23,42,0.7)',
-                border: '1px solid rgba(30,41,59,0.9)',
-                borderRadius: '18px', padding: '1.5rem',
-                backdropFilter: 'blur(12px)',
+                background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(30,41,59,0.9)',
+                borderRadius: '18px', padding: '1.5rem', backdropFilter: 'blur(12px)',
               }}>
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '0.75rem' }}>
                   {[...Array(stars)].map((_, i) => <Star key={i} size={13} fill="#fbbf24" color="#fbbf24" />)}
@@ -757,13 +752,8 @@ export default function Home() {
             CTA FINAL — DUAL
         ══════════════════════════════════════════════════ */}
         <section style={{ width: '100%', maxWidth: '900px', padding: '0 2rem 6rem' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '1.5rem',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
 
-            {/* CTA Reclamación */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(79,70,229,0.15), rgba(124,58,237,0.1))',
               border: '1px solid rgba(99,102,241,0.25)',
@@ -774,8 +764,7 @@ export default function Home() {
                 width: '56px', height: '56px', borderRadius: '16px',
                 background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 1.25rem',
-                boxShadow: '0 0 32px rgba(99,102,241,0.4)',
+                margin: '0 auto 1.25rem', boxShadow: '0 0 32px rgba(99,102,241,0.4)',
               }}>
                 <MessageSquare size={26} color="white" />
               </div>
@@ -789,12 +778,10 @@ export default function Home() {
                 onClick={() => router.push('/chat')}
                 style={{
                   background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                  border: 'none', borderRadius: '14px',
-                  padding: '0.9rem 2rem', color: 'white',
+                  border: 'none', borderRadius: '14px', padding: '0.9rem 2rem', color: 'white',
                   fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                  boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
-                  transition: 'all 0.25s',
+                  boxShadow: '0 8px 32px rgba(99,102,241,0.4)', transition: 'all 0.25s',
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLButtonElement
@@ -813,7 +800,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* CTA Turismo */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(5,150,105,0.15), rgba(16,185,129,0.08))',
               border: '1px solid rgba(5,150,105,0.25)',
@@ -824,8 +810,7 @@ export default function Home() {
                 width: '56px', height: '56px', borderRadius: '16px',
                 background: 'linear-gradient(135deg, #059669, #10b981)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 1.25rem',
-                boxShadow: '0 0 32px rgba(5,150,105,0.4)',
+                margin: '0 auto 1.25rem', boxShadow: '0 0 32px rgba(5,150,105,0.4)',
               }}>
                 <Compass size={26} color="white" />
               </div>
@@ -839,12 +824,10 @@ export default function Home() {
                 onClick={() => router.push('/turismo')}
                 style={{
                   background: 'linear-gradient(135deg, #059669, #10b981)',
-                  border: 'none', borderRadius: '14px',
-                  padding: '0.9rem 2rem', color: 'white',
+                  border: 'none', borderRadius: '14px', padding: '0.9rem 2rem', color: 'white',
                   fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                  boxShadow: '0 8px 32px rgba(5,150,105,0.4)',
-                  transition: 'all 0.25s',
+                  boxShadow: '0 8px 32px rgba(5,150,105,0.4)', transition: 'all 0.25s',
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLButtonElement
@@ -891,7 +874,3 @@ export default function Home() {
     </div>
   )
 }
-
-
-
-
