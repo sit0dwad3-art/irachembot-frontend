@@ -125,35 +125,54 @@ const SECTORS = [
   { emoji: '🏨', label: 'Turismo',    color: '#16a34a' },
   { emoji: '📦', label: 'E-commerce', color: '#0891b2' },
 ]
-// ── Robot Head Animado ────────────────────────────────────────────────────────
+// ── Robot Head Animado + Flotante ─────────────────────────────────────────────
 function RobotHead() {
   const robotRef = useRef<HTMLDivElement>(null)
-  const [minimized, setMinimized] = useState(false)
   const [gesture, setGesture] = useState('')
   const [rotation, setRotation] = useState({ x: 0, y: 0 })
 
-  // 1️⃣ SEGUIR CURSOR
+  const posRef = useRef({ x: 100, y: 100 })
+  const velRef = useRef({ x: 0.7, y: 0.5 })
+  const rafRef = useRef<number>(0)
+  const SIZE = 100
+
+  // 1️⃣ MOVIMIENTO FLOTANTE — rebota en bordes, siempre visible
+  useEffect(() => {
+    const animate = () => {
+      const pos = posRef.current
+      const vel = velRef.current
+
+      pos.x += vel.x
+      pos.y += vel.y
+
+      if (pos.x <= 0 || pos.x >= window.innerWidth - SIZE)  vel.x *= -1
+      if (pos.y <= 0 || pos.y >= window.innerHeight - SIZE) vel.y *= -1
+
+      if (robotRef.current) {
+        robotRef.current.style.left = `${pos.x}px`
+        robotRef.current.style.top  = `${pos.y}px`
+      }
+
+      rafRef.current = requestAnimationFrame(animate)
+    }
+
+    rafRef.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [])
+
+  // 2️⃣ SEGUIR CURSOR — inclinación 3D suave
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!robotRef.current) return
       const rect = robotRef.current.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const centerY = rect.top + rect.height / 2
-      const angleX = ((e.clientY - centerY) / window.innerHeight) * 12
-      const angleY = ((e.clientX - centerX) / window.innerWidth) * -12
+      const angleX = ((e.clientY - centerY) / window.innerHeight) * 15
+      const angleY = ((e.clientX - centerX) / window.innerWidth) * -15
       setRotation({ x: angleX, y: angleY })
     }
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-
-  // 2️⃣ SCROLL → minimizar
-  useEffect(() => {
-    const handleScroll = () => {
-      setMinimized(window.scrollY > 300)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   // 3️⃣ GESTOS CADA 5 SEGUNDOS
@@ -169,7 +188,6 @@ function RobotHead() {
 
   return (
     <>
-      {/* ── Estilos de animaciones ── */}
       <style>{`
         @keyframes tilt-left {
           0%, 100% { transform: rotate(0deg); }
@@ -181,81 +199,48 @@ function RobotHead() {
         }
         @keyframes nod {
           0%, 100% { transform: translateY(0px); }
-          40%       { transform: translateY(-12px); }
+          40%       { transform: translateY(-10px); }
           70%       { transform: translateY(4px); }
         }
         @keyframes blink {
-          0%, 90%, 100% { filter: brightness(1); }
-          95%            { filter: brightness(0.2); }
+          0%, 90%, 100% { filter: drop-shadow(0 0 20px rgba(99,102,241,0.6)) brightness(1); }
+          95%            { filter: drop-shadow(0 0 20px rgba(99,102,241,0.6)) brightness(0.15); }
         }
-        @keyframes bounce-in {
-          0%   { transform: scale(1.2); }
-          60%  { transform: scale(0.9); }
-          100% { transform: scale(1); }
-        }
-        .robot-gesture-tilt-left  { animation: tilt-left  0.6s ease; }
-        .robot-gesture-tilt-right { animation: tilt-right 0.6s ease; }
-        .robot-gesture-nod        { animation: nod        0.6s ease; }
-        .robot-gesture-blink      { animation: blink      0.4s ease; }
-        .robot-minimized-bounce   { animation: bounce-in  0.4s ease; }
+        .robot-gesture-tilt-left  { animation: tilt-left  0.6s ease !important; }
+        .robot-gesture-tilt-right { animation: tilt-right 0.6s ease !important; }
+        .robot-gesture-nod        { animation: nod        0.6s ease !important; }
+        .robot-gesture-blink      { animation: blink      0.4s ease !important; }
+        .robot-float:hover        { transform: scale(1.15) !important; cursor: pointer; }
       `}</style>
 
-      {/* ── Versión HERO (centrada, grande) ── */}
-      {!minimized && (
-        <div
-          ref={robotRef}
-          className={gesture ? `robot-gesture-${gesture}` : ''}
-          style={{
-            width: '140px',
-            height: '140px',
-            marginBottom: '2rem',
-            perspective: '600px',
-            cursor: 'none',
-            transition: 'transform 0.1s ease',
-            transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-            filter: 'drop-shadow(0 0 30px rgba(99,102,241,0.5))',
-          }}
-        >
-          <img
-            src="/bot-icon-new.png"
-            alt="IracheBot"
-            width={140}
-            height={140}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        </div>
-      )}
-
-      {/* ── Versión MINIMIZADA (esquina inferior derecha) ── */}
-      {minimized && (
-        <div
-          className="robot-minimized-bounce"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            width: '72px',
-            height: '72px',
-            zIndex: 999,
-            cursor: 'pointer',
-            filter: 'drop-shadow(0 0 16px rgba(99,102,241,0.6))',
-            transition: 'transform 0.3s ease',
-          }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
-          onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-          title="Volver arriba"
-        >
-          <img
-            src="/bot-icon-new.png"
-            alt="IracheBot"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        </div>
-      )}
+      <div
+        ref={robotRef}
+        className={`robot-float ${gesture ? `robot-gesture-${gesture}` : ''}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        title="Volver arriba"
+        style={{
+          position:   'fixed',
+          left:       `${posRef.current.x}px`,
+          top:        `${posRef.current.y}px`,
+          width:      `${SIZE}px`,
+          height:     `${SIZE}px`,
+          zIndex:     9999,
+          transform:  `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+          filter:     'drop-shadow(0 0 20px rgba(99,102,241,0.6))',
+          transition: 'transform 0.08s ease',
+          willChange: 'left, top, transform',
+        }}
+      >
+        <img
+          src="/bot-icon-new.png"
+          alt="IracheBot"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+        />
+      </div>
     </>
   )
 }
+
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter()
