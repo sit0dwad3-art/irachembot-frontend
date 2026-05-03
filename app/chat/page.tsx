@@ -169,7 +169,7 @@ export default function ChatPage() {
           marginBottom: '0.75rem',
         }}>
           {/* Icono SVG personalizado */}
-          <img src="/bot-icon.svg" alt="IracheBot" width={40} height={40}
+          <img src="/bot-icon-new.png" alt="IracheBot" width={40} height={40}
             style={{ borderRadius: '10px' }} />
           <div style={{ flex: 1 }}>
             <h1 style={{ color: '#f1f5f9', fontSize: '1.125rem', fontWeight: 700, margin: 0 }}>
@@ -235,7 +235,7 @@ export default function ChatPage() {
               gap: '0.5rem',
             }}>
               {msg.rol === 'bot' && (
-                <img src="/bot-icon.svg" alt="bot" width={28} height={28}
+                <img src="/bot-icon-new.png" alt="bot" width={28} height={28}
                   style={{ borderRadius: '8px', flexShrink: 0 }} />
               )}
               <div style={{
@@ -318,7 +318,7 @@ export default function ChatPage() {
         {/* Typing indicator */}
         {cargando && (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
-            <img src="/bot-icon.svg" alt="bot" width={28} height={28} style={{ borderRadius: '8px' }} />
+            <img src="/bot-icon-new.png" alt="bot" width={28} height={28} style={{ borderRadius: '8px' }} />
             <div style={{
               padding: '0.75rem 1rem',
               borderRadius: '16px 16px 16px 4px',
