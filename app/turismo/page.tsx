@@ -6,6 +6,12 @@ import { ArrowLeft, Send, Map, Car, Plane, Train, Bus, Calculator, Compass, Chev
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
+import dynamic from 'next/dynamic'
+
+const MapaInteractivo = dynamic(
+  () => import('@/components/MapaInteractivo'),
+  { ssr: false }
+)
 
 interface Mensaje {
   rol: 'usuario' | 'bot'
@@ -457,6 +463,8 @@ export default function TurismoPage() {
   const [mercado,        setMercado]        = useState<string>('auto')
   const [planTextoFinal, setPlanTextoFinal] = useState('')
   const [botListo,       setBotListo]       = useState(false)
+  const [mapaAbierto, setMapaAbierto] = useState(false)
+
 
   // ── Feature 1: Voz ──────────────────────────────────────────────────────
   const [escuchando,      setEscuchando]      = useState(false)
@@ -557,6 +565,11 @@ export default function TurismoPage() {
         nuevoMensaje.planTexto = data.plan.texto
         setPlanListo(true)
         setPlanTextoFinal(data.plan.texto)
+        setPaso('finalizado')
+      }
+      if (data.finalizado) {
+        setPlanListo(true)                          // ← doble seguro
+        setPaso('finalizado')
       }
       setMensajes(prev => [...prev, nuevoMensaje])
     } catch {
@@ -726,6 +739,28 @@ export default function TurismoPage() {
             onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = '0 4px 16px rgba(5,150,105,0.4)' }}
           >📄 Descargar PDF</button>
         )}
+        <button
+          onClick={() => setMapaAbierto(true)}
+          style={{
+            background:   'rgba(16,185,129,0.1)',
+            border:       '1px solid rgba(16,185,129,0.3)',
+            borderRadius: '10px',
+            padding:      '8px 14px',
+            cursor:       'pointer',
+            fontSize:     12,
+            fontWeight:   700,
+            color:        '#10b981',
+            display:      'flex',
+            alignItems:   'center',
+            gap:          '6px',
+            transition:   'all 0.2s',
+            whiteSpace:   'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.2)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)' }}
+        >
+          🗺️ Ver mapa
+        </button>
       </div>
 
       {/* ── Barra de progreso ── */}
@@ -787,51 +822,79 @@ export default function TurismoPage() {
             </div>
 
             {m.esPlan && m.planTexto && (
-              <div style={{
-                maxWidth: '95%', width: '100%',
-                background: 'linear-gradient(135deg,rgba(6,78,59,0.9),rgba(6,95,70,0.8))',
-                border: '1px solid rgba(5,150,105,0.4)', borderRadius: 16,
-                padding: '20px 24px', fontSize: 13, color: '#d1fae5', lineHeight: 1.8,
-                backdropFilter: 'blur(20px)', boxShadow: '0 16px 48px rgba(5,150,105,0.15)',
-                animation: 'plan-in .4s ease both',
-              }}>
-                <ReactMarkdown components={mdPlan} remarkPlugins={[remarkGfm]}>{m.planTexto}</ReactMarkdown>
-              </div>
-            )}
+            <div style={{
+              maxWidth: '95%', width: '100%',
+              background: 'linear-gradient(135deg,rgba(6,78,59,0.9),rgba(6,95,70,0.8))',
+              border: '1px solid rgba(5,150,105,0.4)', borderRadius: 16,
+              padding: '20px 24px', fontSize: 13, color: '#d1fae5', lineHeight: 1.8,
+              backdropFilter: 'blur(20px)', boxShadow: '0 16px 48px rgba(5,150,105,0.15)',
+              animation: 'plan-in .4s ease both',
+            }}>
+              <ReactMarkdown components={mdPlan} remarkPlugins={[remarkGfm]}>{m.planTexto}</ReactMarkdown>
 
-            {m.rol === 'bot' && m.opciones && m.opciones.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, maxWidth: '85%', paddingLeft: '42px' }}>
-                {m.opciones.map((op, j) => (
-                  <button key={j} onClick={() => enviarMensaje(op)}
-                    disabled={cargando || !botListo || i < mensajes.length - 1}
-                    style={{
-                      background: 'rgba(6,11,24,0.8)', border: '1px solid rgba(5,150,105,0.4)', color: '#10b981',
-                      borderRadius: 20, padding: '6px 14px',
-                      cursor: (cargando || !botListo || i < mensajes.length - 1) ? 'default' : 'pointer',
-                      fontSize: 12, fontWeight: 500,
-                      opacity: (!botListo || i < mensajes.length - 1) ? 0.3 : 1,
-                      transition: 'all .2s', backdropFilter: 'blur(8px)',
-                    }}
-                    onMouseEnter={e => {
-                      if (i === mensajes.length - 1 && !cargando && botListo) {
-                        const b = e.currentTarget as HTMLButtonElement
-                        b.style.background = 'rgba(5,150,105,0.2)'
-                        b.style.borderColor = '#10b981'
-                        b.style.transform = 'translateY(-1px)'
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      const b = e.currentTarget as HTMLButtonElement
-                      b.style.background = 'rgba(6,11,24,0.8)'
-                      b.style.borderColor = 'rgba(5,150,105,0.4)'
-                      b.style.transform = 'translateY(0)'
-                    }}
-                  >{op}</button>
-                ))}
+              {/* ── Botón trigger mapa ── */}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(5,150,105,0.2)' }}>
+                <button
+                  onClick={() => setMapaAbierto(true)}
+                  style={{
+                    width:          '100%',
+                    background:     'rgba(16,185,129,0.08)',
+                    border:         '1px solid rgba(16,185,129,0.25)',
+                    borderRadius:   '12px',
+                    padding:        '10px 16px',
+                    cursor:         'pointer',
+                    display:        'flex',
+                    alignItems:     'center',
+                    justifyContent: 'center',
+                    gap:            '8px',
+                    fontSize:       '13px',
+                    fontWeight:     600,
+                    color:          '#10b981',
+                    transition:     'all .2s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.15)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)' }}
+                >
+                  🗺️ Ver todos los lugares en el mapa
+                </button>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          )}
+
+          {m.rol === 'bot' && m.opciones && m.opciones.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, maxWidth: '85%', paddingLeft: '42px' }}>
+              {m.opciones.map((op, j) => (
+                <button key={j} onClick={() => enviarMensaje(op)}
+                  disabled={cargando || !botListo || i < mensajes.length - 1}
+                  style={{
+                    background: 'rgba(6,11,24,0.8)', border: '1px solid rgba(5,150,105,0.4)', color: '#10b981',
+                    borderRadius: 20, padding: '6px 14px',
+                    cursor: (cargando || !botListo || i < mensajes.length - 1) ? 'default' : 'pointer',
+                    fontSize: 12, fontWeight: 500,
+                    opacity: (!botListo || i < mensajes.length - 1) ? 0.3 : 1,
+                    transition: 'all .2s', backdropFilter: 'blur(8px)',
+                  }}
+                  onMouseEnter={e => {
+                    if (i === mensajes.length - 1 && !cargando && botListo) {
+                      const b = e.currentTarget as HTMLButtonElement
+                      b.style.background = 'rgba(5,150,105,0.2)'
+                      b.style.borderColor = '#10b981'
+                      b.style.transform = 'translateY(-1px)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    const b = e.currentTarget as HTMLButtonElement
+                    b.style.background = 'rgba(6,11,24,0.8)'
+                    b.style.borderColor = 'rgba(5,150,105,0.4)'
+                    b.style.transform = 'translateY(0)'
+                  }}
+                >{op}</button>
+              ))}
+            </div>
+          )}
+                  </div>
+                ))}
+
 
         {/* Feature 2: Typing indicator dinámico */}
         {cargando && <TypingIndicator paso={paso} />}
@@ -857,11 +920,11 @@ export default function TurismoPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Zona de Input con los 4 features ── */}
+            {/* ── Zona de Input con los 4 features ── */}
       <div style={{
         width: '100%', maxWidth: 720,
         padding: '8px 20px 24px',
-                borderTop: '1px solid rgba(15,23,42,0.8)',
+        borderTop: '1px solid rgba(15,23,42,0.8)',
         background: 'rgba(6,11,24,0.95)',
         backdropFilter: 'blur(20px)',
         position: 'sticky', bottom: 0, zIndex: 10,
@@ -905,7 +968,6 @@ export default function TurismoPage() {
             display: 'flex', alignItems: 'center', gap: 8,
             marginBottom: 6, paddingLeft: 4,
           }}>
-            {/* Barra de progreso */}
             <div style={{
               flex: 1, height: 2, borderRadius: 99,
               background: 'rgba(30,41,59,0.6)', overflow: 'hidden',
@@ -919,7 +981,6 @@ export default function TurismoPage() {
                 boxShadow: `0 0 6px ${calidad.color}66`,
               }}/>
             </div>
-            {/* Label */}
             <span style={{
               fontSize: 10, fontWeight: 600,
               color: calidad.color,
@@ -1021,7 +1082,7 @@ export default function TurismoPage() {
             </button>
           )}
 
-          {/* Botón enviar */}
+          {/* ── Botón enviar ── */}
           <button
             onClick={() => enviarMensaje(input)}
             disabled={botonBloqueado}
@@ -1043,7 +1104,23 @@ export default function TurismoPage() {
           </button>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════
+          ✅ MAPA INTERACTIVO
+      ══════════════════════════════════════════ */}
+      {mapaAbierto && planTextoFinal && (
+        <MapaInteractivo
+          planTexto={planTextoFinal}
+          destino={datos.destino_deseado ?? ''}
+          onCerrar={() => setMapaAbierto(false)}
+          onEnviarChat={(msg) => {
+            setMapaAbierto(false)
+            enviarMensaje(msg)
+          }}
+          cargandoChat={cargando}
+        />
+      )}
+
     </div>
   )
 }
-
