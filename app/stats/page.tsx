@@ -95,7 +95,7 @@ export default function StatsPage() {
             }}>Transparencia</span>
           </h1>
           <p style={{ color: '#475569', fontSize: '0.95rem' }}>
-            Datos agregados del Servicio de Consumo de Navarra · Sin datos personales
+            Datos agregados del Servicio de consumo y turismo · Sin datos personales
           </p>
         </div>
 

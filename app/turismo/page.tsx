@@ -644,7 +644,7 @@ export default function TurismoPage() {
 <div class="header"><h1>🌍 Plan de Viaje Personalizado</h1><p>Preparado para <strong style="color:#a78bfa">${nombre}</strong> · ${fecha}</p>
 <div style="margin-top:12px"><span class="badge">🤖 IracheBot Turismo</span><span class="badge">📍 ${mercado === 'internacional' ? 'Internacional' : mercado === 'espana' ? 'España' : 'Navarra'}</span></div></div>
 <div class="plan">${planHtml}</div>
-<div class="footer"><p>© 2026 IracheBot · Servicio de Consumo de Navarra</p><p style="margin-top:4px">💡 Ctrl + P → "Guardar como PDF"</p></div>
+<div class="footer"><p>© 2026 IracheBot · Servicio de consumo y turismo</p><p style="margin-top:4px">💡 Ctrl + P → "Guardar como PDF"</p></div>
 <script>window.onload=()=>{window.focus();window.print()}</script></body></html>`
 
     const ventana = window.open('', '_blank')
