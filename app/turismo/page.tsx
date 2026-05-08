@@ -711,7 +711,18 @@ export default function TurismoPage() {
 
   const descargarPDF = () => {
   const nombre  = datos.nombre  || 'Viajero'
-  const destino = (datos.destino_deseado || datos.destino || mercado || 'Navarra').toUpperCase()
+  const destinoRaw =
+    datos.destino_deseado?.trim()                                        ||
+    datos.destino?.trim()                                                ||
+    (mercado !== 'auto'          &&
+     mercado !== 'AUTO'          &&
+     mercado !== 'navarra'       &&
+     mercado !== 'espana'        &&
+     mercado !== 'internacional'
+       ? mercado : '')                                                    ||
+    'Navarra'
+
+  const destino = destinoRaw.toUpperCase()
   const fecha   = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
   const plan    = planTextoFinal || '(sin contenido)'
 
@@ -807,6 +818,24 @@ export default function TurismoPage() {
     [/barcelona/i,    '#Barcelona'],
   ]
   const tags = tagsPool.filter(([rx]) => rx.test(plan)).map(([,t]) => t).slice(0, 5)
+
+  // ── Label legible del mercado para el footer ─────────────────────────────
+  const mercadoLabel = (() => {
+    const d = destinoRaw.toLowerCase()
+    // Primero intentar por el valor de mercado
+    if (mercado === 'navarra')       return '🏔️ Navarra'
+    if (mercado === 'espana')        return '🇪🇸 España'
+    if (mercado === 'internacional') return '🌍 Internacional'
+    // Si mercado es 'auto', detectar por el destino
+    if (/paris|roma|london|tokyo|dubai|bangkok|new york|berlin|amsterdam|lisboa|oporto/i.test(d))
+      return '🌍 Internacional'
+    if (/madrid|barcelona|sevilla|valencia|bilbao|málaga|granada|zaragoza|burgos/i.test(d))
+      return '🇪🇸 España'
+    if (/navarra|pamplona|pirineo|bardenas|olite|roncal|baztan|irati/i.test(d))
+      return '🏔️ Navarra'
+    return '✈️ Turismo & Ocio'
+  })()
+
 
   // ── HTML final ──────────────────────────────────────────────────────────
   const html = `<!DOCTYPE html>
@@ -1055,20 +1084,32 @@ export default function TurismoPage() {
     thead tr {
       background: ${categoria.primario};
     }
-    th {
-      color: white;
-      padding: 9px 14px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 10px;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
     td {
-      padding: 8px 14px;
+      padding: 6px 10px;
       border-bottom: 1px solid #f3f4f6;
       color: #374151;
       vertical-align: top;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    th {
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 9.5px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    /* Columna precio — no partir */
+    td:last-child, th:last-child {
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    /* Columna hora — fija */
+    td:first-child, th:first-child {
+      white-space: nowrap;
+      width: 52px;
     }
     tbody tr:nth-child(even) td { background: #fafafa; }
     tbody tr:first-child td { font-weight: 600; color: ${categoria.acento2}; }
@@ -1165,13 +1206,13 @@ export default function TurismoPage() {
 
   <!-- ══ CONTENIDO ══ -->
   <div class="contenido">
-    <p class="parrafo">${planHtml}</p>
+    ${planHtml}
   </div>
 
   <!-- ══ FOOTER ══ -->
   <div class="footer">
     <div>
-      <div class="footer-marca">IracheBot · Turismo & Ocio</div>
+      <div class="footer-marca">IracheBot · ${mercadoLabel}</div>
       <div class="footer-info">${fecha} · irachebot.com</div>
     </div>
     <div>
