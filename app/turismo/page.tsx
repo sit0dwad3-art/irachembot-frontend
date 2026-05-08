@@ -710,42 +710,488 @@ export default function TurismoPage() {
   }, [vozSoportada, escuchando])
 
   const descargarPDF = () => {
-    const nombre = datos.nombre || 'Viajero'
-    const fecha  = new Date().toLocaleDateString('es-ES')
-    const plan   = planTextoFinal || '(sin contenido)'
-    const planHtml = plan
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g,     '<em>$1</em>')
-      .replace(/^### (.+)$/gm,   '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm,    '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm,     '<h1>$1</h1>')
-      .replace(/^---$/gm,        '<hr>')
-      .replace(/^\* (.+)$/gm,    '<li>$1</li>')
-      .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
-      .replace(/(\|.+\|\n)((?:\|[-:]+)+\|\n)((?:\|.+\|\n?)*)/g, (_, header, _sep, body) => {
-        const ths = header.split('|').filter((c: string) => c.trim()).map((c: string) => `<th>${c.trim()}</th>`).join('')
-        const trs = body.trim().split('\n').map((row: string) => {
-          const tds = row.split('|').filter((c: string) => c.trim()).map((c: string) => `<td>${c.trim()}</td>`).join('')
-          return `<tr>${tds}</tr>`
-        }).join('')
-        return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`
-      })
-      .replace(/\n/g, '<br>')
+  const nombre  = datos.nombre  || 'Viajero'
+  const destino = (datos.destino_deseado || datos.destino || mercado || 'Navarra').toUpperCase()
+  const fecha   = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const plan    = planTextoFinal || '(sin contenido)'
 
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plan de Viaje — ${nombre}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;padding:48px;max-width:760px;margin:0 auto}.header{text-align:center;margin-bottom:36px;padding-bottom:24px;border-bottom:2px solid #4f46e5}.header h1{font-size:26px;color:#a78bfa;margin-bottom:8px}.header p{color:#64748b;font-size:13px}.badge{display:inline-block;background:#4f46e5;color:white;border-radius:20px;padding:4px 14px;font-size:11px;margin:3px}.plan{background:#1e293b;border-radius:12px;padding:28px;font-size:13px;line-height:1.9;color:#d1fae5;border:1px solid #059669}.plan h1{color:#34d399;font-size:16px;margin:14px 0 6px;border-bottom:1px solid #059669;padding-bottom:4px}.plan h2{color:#34d399;font-size:15px;margin:12px 0 5px}.plan h3{color:#6ee7b7;font-size:14px;margin:10px 0 4px}.plan strong{color:#6ee7b7}.plan hr{border:none;border-top:1px solid #065f46;margin:10px 0}.plan ul{padding-left:20px;margin:6px 0}.plan li{margin-bottom:4px}.plan table{border-collapse:collapse;width:100%;margin:10px 0;font-size:12px}.plan th{background:#059669;color:white;padding:7px 12px;text-align:left;border:1px solid #047857}.plan td{padding:6px 12px;border:1px solid #1e3a2f}.footer{text-align:center;margin-top:28px;color:#475569;font-size:11px}@media print{body{background:#fff;color:#111;padding:32px}.plan{background:#f0fdf4;color:#064e3b;border-color:#059669}.plan th{background:#059669;color:white}.plan td{border-color:#a7f3d0}.plan strong{color:#065f46}.plan h1,.plan h2{color:#065f46}.header h1{color:#4f46e5}}</style>
-</head><body>
-<div class="header"><h1>🌍 Plan de Viaje Personalizado</h1><p>Preparado para <strong style="color:#a78bfa">${nombre}</strong> · ${fecha}</p>
-<div style="margin-top:12px"><span class="badge">🤖 IracheBot Turismo</span><span class="badge">📍 ${mercado === 'internacional' ? 'Internacional' : mercado === 'espana' ? 'España' : 'Navarra'}</span></div></div>
-<div class="plan">${planHtml}</div>
-<div class="footer"><p>© 2026 IracheBot · Servicio de consumo y turismo</p><p style="margin-top:4px">💡 Ctrl + P → "Guardar como PDF"</p></div>
-<script>window.onload=()=>{window.focus();window.print()}</script></body></html>`
+  // ── Detectar categoría del viaje para paleta cromática ──────────────────
+  const txt = plan.toLowerCase()
+  const categoria = (() => {
+    if (/nocturno|pintxo|bar |discoteca|copas|fiesta|noche/.test(txt))
+      return { nombre: 'OCIO NOCTURNO', primario: '#0f172a', acento: '#c8a96e', acento2: '#a07840', claro: '#fdf6ec' }
+    if (/playa|costa|mar |surf|buceo|mediterr/.test(txt))
+      return { nombre: 'ESCAPADA COSTERA', primario: '#0c2340', acento: '#2e86ab', acento2: '#1a5f7a', claro: '#f0f8ff' }
+    if (/montaña|pirineo|senderismo|cumbre|bosque|irati|roncal/.test(txt))
+      return { nombre: 'AVENTURA EN MONTAÑA', primario: '#1a2e1a', acento: '#4a7c59', acento2: '#2d5a3d', claro: '#f0f7f0' }
+    if (/vino|bodega|rioja|ribera|gastronom|restaurante michelin|alta cocina/.test(txt))
+      return { nombre: 'RUTA GASTRONÓMICA', primario: '#2d1b0e', acento: '#c17f3c', acento2: '#8b5a1f', claro: '#fdf8f0' }
+    if (/museo|catedral|castillo|patrimonio|historia|cultura|arte/.test(txt))
+      return { nombre: 'VIAJE CULTURAL', primario: '#1a1a2e', acento: '#7c6fcd', acento2: '#5a4fa0', claro: '#f5f4ff' }
+    if (/camino|peregrino|ruta|trekking|bici|ciclo/.test(txt))
+      return { nombre: 'RUTA & AVENTURA', primario: '#1a2010', acento: '#6b8f3e', acento2: '#4a6b28', claro: '#f4f8f0' }
+    return   { nombre: 'PLAN DE VIAJE',    primario: '#0f172a', acento: '#059669', acento2: '#047857', claro: '#f0fdf4' }
+  })()
 
-    const ventana = window.open('', '_blank')
-    if (!ventana) return
-    ventana.document.write(html)
-    ventana.document.close()
-  }
+  // ── Convertir Markdown a HTML limpio (sin emojis en headers) ────────────
+  const limpiarEmojis = (s: string) =>
+    s.replace(/[\u{1F300}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim()
+
+  let seccionNum = 0
+  const planHtml = plan
+    // Headers con numeración automática y barra lateral
+    .replace(/^## (.+)$/gm, (_, t) => {
+      seccionNum++
+      const titulo = limpiarEmojis(t)
+      return `
+        <div class="seccion">
+          <div class="seccion-header">
+            <span class="sec-num">${String(seccionNum).padStart(2,'0')}</span>
+            <div class="sec-titulo-wrap">
+              <div class="sec-linea"></div>
+              <h2 class="sec-titulo">${titulo}</h2>
+            </div>
+          </div>
+          <div class="seccion-body">`
+    })
+    .replace(/^### (.+)$/gm, (_, t) => `<h3 class="sub-titulo">${limpiarEmojis(t)}</h3>`)
+    .replace(/^# (.+)$/gm,   (_, t) => `<h1 class="titulo-mayor">${limpiarEmojis(t)}</h1>`)
+    // Negritas y cursivas
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+    // HR
+    .replace(/^---$/gm, '</div></div><div class="sep-hr"></div>')
+    // Listas
+    .replace(/^\* (.+)$/gm,   '<li>$1</li>')
+    .replace(/^- (.+)$/gm,    '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul class="lista">${s}</ul>`)
+    // Tablas Markdown → HTML
+    .replace(/(\|.+\|\n)((?:\|[-:| ]+\|\n))((?:\|.+\|\n?)*)/g, (_, header, _sep, body) => {
+      const ths = header.split('|').filter((c: string) => c.trim())
+        .map((c: string) => `<th>${limpiarEmojis(c.trim())}</th>`).join('')
+      const trs = body.trim().split('\n').filter(Boolean).map((row: string) => {
+        const tds = row.split('|').filter((c: string) => c.trim())
+          .map((c: string) => `<td>${c.trim()}</td>`).join('')
+        return `<tr>${tds}</tr>`
+      }).join('')
+      return `<div class="tabla-wrap"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`
+    })
+    // Saltos de línea
+    .replace(/\n{2,}/g, '</p><p class="parrafo">')
+    .replace(/\n/g, ' ')
+
+  // ── Extraer presupuesto total del plan ──────────────────────────────────
+  const matchPresup = plan.match(/[Tt]otal[^:]*:\s*([\d€\-–~ ]+(?:por persona)?)/)?.[1]?.trim()
+  const presupDisplay = matchPresup || '—'
+
+  // ── Extraer duración ────────────────────────────────────────────────────
+  const matchDur = plan.match(/(\d+)\s*(noches?|días?|day|night)/i)
+  const durDisplay = matchDur ? `${matchDur[1]} ${matchDur[2].toLowerCase()}` : datos.duracion || '—'
+
+  // ── Generar tags automáticos ────────────────────────────────────────────
+  const tagsPool: [RegExp, string][] = [
+    [/pintxo/i,       '#Pintxos'],
+    [/vino|bodega/i,  '#Enoturismo'],
+    [/senderismo|ruta/i, '#Senderismo'],
+    [/playa|costa/i,  '#Playa'],
+    [/montaña|pirineo/i, '#Montaña'],
+    [/camino/i,       '#CaminoDeSantiago'],
+    [/nocturno|fiesta/i, '#OcioNocturno'],
+    [/museo|cultura/i, '#Cultura'],
+    [/gastronomía|restaurante/i, '#Gastronomía'],
+    [/familia|niños/i, '#FamilyFriendly'],
+    [/romántico|pareja/i, '#Romántico'],
+    [/pamplona/i,     '#Pamplona'],
+    [/navarra/i,      '#Navarra'],
+    [/madrid/i,       '#Madrid'],
+    [/barcelona/i,    '#Barcelona'],
+  ]
+  const tags = tagsPool.filter(([rx]) => rx.test(plan)).map(([,t]) => t).slice(0, 5)
+
+  // ── HTML final ──────────────────────────────────────────────────────────
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Plan de Viaje — ${nombre}</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* ── Watermark tipográfico ── */
+    body::before {
+      content: '${destino.slice(0,8)}';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 18vw;
+      font-weight: 900;
+      color: ${categoria.acento};
+      opacity: 0.028;
+      pointer-events: none;
+      z-index: 0;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+
+    /* ── Portada ── */
+    .portada {
+      background: ${categoria.primario};
+      color: white;
+      padding: 52px 48px 40px;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+    .portada::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, ${categoria.acento}, ${categoria.acento2}, transparent);
+    }
+    .portada-tipo {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .25em;
+      color: ${categoria.acento};
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .portada-destino {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(42px, 8vw, 72px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: white;
+      margin-bottom: 8px;
+    }
+    .portada-subtitulo {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      font-weight: 300;
+      letter-spacing: .04em;
+      margin-bottom: 40px;
+    }
+    .portada-linea {
+      width: 48px;
+      height: 2px;
+      background: ${categoria.acento};
+      margin-bottom: 32px;
+    }
+    .portada-meta {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 32px;
+      width: fit-content;
+    }
+    .meta-item { }
+    .meta-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .meta-valor {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    .portada-tags {
+      position: absolute;
+      bottom: 28px;
+      right: 48px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .tag {
+      font-size: 10px;
+      font-weight: 500;
+      color: ${categoria.acento};
+      border: 1px solid ${categoria.acento}55;
+      border-radius: 2px;
+      padding: 3px 10px;
+      letter-spacing: .06em;
+    }
+    .portada-numero {
+      position: absolute;
+      top: 40px;
+      right: 48px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 120px;
+      font-weight: 900;
+      color: white;
+      opacity: 0.04;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    /* ── Contenido ── */
+    .contenido {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 48px 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Secciones con numeración ── */
+    .seccion {
+      margin-bottom: 40px;
+    }
+    .seccion-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .sec-num {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: ${categoria.acento};
+      opacity: 0.18;
+      line-height: 1;
+      flex-shrink: 0;
+      min-width: 52px;
+    }
+    .sec-titulo-wrap {
+      flex: 1;
+      padding-top: 8px;
+    }
+    .sec-linea {
+      width: 28px;
+      height: 2px;
+      background: ${categoria.acento};
+      margin-bottom: 8px;
+    }
+    .sec-titulo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: ${categoria.primario};
+    }
+    .seccion-body {
+      padding-left: 68px;
+    }
+    .sub-titulo {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: ${categoria.acento2};
+      margin: 16px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid ${categoria.acento}22;
+    }
+    .titulo-mayor {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: ${categoria.primario};
+      margin-bottom: 12px;
+    }
+    .parrafo {
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    strong { color: ${categoria.primario}; font-weight: 600; }
+    em     { color: #6b7280; font-style: italic; }
+
+    /* ── Listas ── */
+    .lista {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0;
+    }
+    .lista li {
+      padding: 5px 0 5px 16px;
+      position: relative;
+      color: #374151;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12.5px;
+    }
+    .lista li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 5px;
+      height: 1px;
+      background: ${categoria.acento};
+    }
+
+    /* ── Tablas ── */
+    .tabla-wrap {
+      margin: 12px 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 11.5px;
+    }
+    thead tr {
+      background: ${categoria.primario};
+    }
+    th {
+      color: white;
+      padding: 9px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #374151;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) td { background: #fafafa; }
+    tbody tr:first-child td { font-weight: 600; color: ${categoria.acento2}; }
+
+    /* ── Separador ── */
+    .sep-hr {
+      height: 1px;
+      background: linear-gradient(90deg, ${categoria.acento}44, transparent);
+      margin: 32px 0;
+    }
+
+    /* ── Consejo final ── */
+    .consejo-box {
+      background: ${categoria.claro};
+      border-left: 3px solid ${categoria.acento};
+      padding: 16px 20px;
+      margin-top: 8px;
+      border-radius: 0 4px 4px 0;
+    }
+    .consejo-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: ${categoria.acento2};
+      margin-bottom: 6px;
+    }
+    .consejo-texto {
+      font-size: 12.5px;
+      color: #374151;
+      line-height: 1.7;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #e5e7eb;
+      padding: 20px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-marca {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: ${categoria.acento};
+    }
+    .footer-info {
+      font-size: 10px;
+      color: #9ca3af;
+    }
+    .footer-hint {
+      font-size: 9px;
+      color: #d1d5db;
+      margin-top: 2px;
+      text-align: right;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body::before { opacity: 0.022; }
+      .portada { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      thead tr  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .consejo-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ PORTADA ══ -->
+  <div class="portada">
+    <div class="portada-numero">${destino.slice(0,1)}</div>
+    <div class="portada-tipo">${categoria.nombre}</div>
+    <div class="portada-destino">${destino}</div>
+    <div class="portada-subtitulo">Plan de viaje personalizado</div>
+    <div class="portada-linea"></div>
+    <div class="portada-meta">
+      <div class="meta-item">
+        <div class="meta-label">Preparado para</div>
+        <div class="meta-valor">${nombre}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Duración</div>
+        <div class="meta-valor">${durDisplay}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Presupuesto est.</div>
+        <div class="meta-valor">${presupDisplay}</div>
+      </div>
+    </div>
+    ${tags.length ? `<div class="portada-tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+  </div>
+
+  <!-- ══ CONTENIDO ══ -->
+  <div class="contenido">
+    <p class="parrafo">${planHtml}</p>
+  </div>
+
+  <!-- ══ FOOTER ══ -->
+  <div class="footer">
+    <div>
+      <div class="footer-marca">IracheBot · Turismo & Ocio</div>
+      <div class="footer-info">${fecha} · irachebot.com</div>
+    </div>
+    <div>
+      <div class="footer-info">${nombre} · ${destino}</div>
+      <div class="footer-hint">Ctrl + P para guardar como PDF</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = () => { window.focus(); window.print() }
+  </script>
+</body>
+</html>`
+
+  const ventana = window.open('', '_blank')
+  if (!ventana) return
+  ventana.document.write(html)
+  ventana.document.close()
+}
+
 
   // ── Feature 4: calidad del input ────────────────────────────────────────
   const calidad        = calcularCalidad(input, paso)
