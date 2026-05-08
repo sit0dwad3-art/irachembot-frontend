@@ -875,7 +875,7 @@ export default function TurismoPage() {
         </div>
       </div>
 
-      {/* ── Mensajes ── */}
+            {/* ── Mensajes ── */}
       <div style={{
         flex: 1, width: '100%', maxWidth: 720,
         padding: '12px 20px', overflowY: 'auto',
@@ -916,121 +916,204 @@ export default function TurismoPage() {
               </div>
             </div>
 
+            {/* ── Bloque del plan ── */}
             {m.esPlan && m.planTexto && (
-            <div style={{
-              maxWidth: '95%', width: '100%',
-              background: 'linear-gradient(135deg,rgba(6,78,59,0.9),rgba(6,95,70,0.8))',
-              border: '1px solid rgba(5,150,105,0.4)', borderRadius: 16,
-              padding: '20px 24px', fontSize: 13, color: '#d1fae5', lineHeight: 1.8,
-              backdropFilter: 'blur(20px)', boxShadow: '0 16px 48px rgba(5,150,105,0.15)',
-              animation: 'plan-in .4s ease both',
-            }}>
-              <ReactMarkdown components={mdPlan} remarkPlugins={[remarkGfm]}>{m.planTexto}</ReactMarkdown>
+              <div style={{
+                maxWidth: '95%', width: '100%',
+                background: 'linear-gradient(135deg,rgba(6,78,59,0.9),rgba(6,95,70,0.8))',
+                border: '1px solid rgba(5,150,105,0.4)', borderRadius: 16,
+                padding: '20px 24px', fontSize: 13, color: '#d1fae5', lineHeight: 1.8,
+                backdropFilter: 'blur(20px)', boxShadow: '0 16px 48px rgba(5,150,105,0.15)',
+                animation: 'plan-in .4s ease both',
+              }}>
+                <ReactMarkdown components={mdPlan} remarkPlugins={[remarkGfm]}>{m.planTexto}</ReactMarkdown>
 
-              {/* ── Botón trigger mapa ── */}
-              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(5,150,105,0.2)' }}>
-                <button
-                  onClick={() => setMapaAbierto(true)}
-                  style={{
-                    width:          '100%',
-                    background:     'rgba(16,185,129,0.08)',
-                    border:         '1px solid rgba(16,185,129,0.25)',
-                    borderRadius:   '12px',
-                    padding:        '10px 16px',
-                    cursor:         'pointer',
-                    display:        'flex',
-                    alignItems:     'center',
-                    justifyContent: 'center',
-                    gap:            '8px',
-                    fontSize:       '13px',
-                    fontWeight:     600,
-                    color:          '#10b981',
-                    transition:     'all .2s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.15)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)' }}
-                >
-                  🗺️ Ver todos los lugares en el mapa
-                </button>
+                {/* ── Botones del plan ── */}
+                <div style={{
+                  marginTop:     '16px',
+                  paddingTop:    '12px',
+                  borderTop:     '1px solid rgba(5,150,105,0.2)',
+                  display:       'flex',
+                  flexDirection: 'column',
+                  gap:           '8px',
+                }}>
+
+                  {/* Botón mapa */}
+                  <button
+                    onClick={() => setMapaAbierto(true)}
+                    style={{
+                      width:          '100%',
+                      background:     'rgba(16,185,129,0.08)',
+                      border:         '1px solid rgba(16,185,129,0.25)',
+                      borderRadius:   '12px',
+                      padding:        '10px 16px',
+                      cursor:         'pointer',
+                      display:        'flex',
+                      alignItems:     'center',
+                      justifyContent: 'center',
+                      gap:            '8px',
+                      fontSize:       '13px',
+                      fontWeight:     600,
+                      color:          '#10b981',
+                      transition:     'all .2s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.15)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)' }}
+                  >
+                    🗺️ Ver todos los lugares en el mapa
+                  </button>
+
+                  {/* Botón continuar — solo si falta la sección final */}
+                  {!m.planTexto.includes('CONSEJO IRACHEBOT') && (
+                    <button
+                      onClick={() => enviarMensaje(
+                        'El plan se cortó, por favor continúa desde donde lo dejaste y termina con el resumen de costes y el consejo final'
+                      )}
+                      disabled={cargando}
+                      style={{
+                        width:          '100%',
+                        background:     'rgba(245,158,11,0.08)',
+                        border:         '1px solid rgba(245,158,11,0.3)',
+                        borderRadius:   '12px',
+                        padding:        '10px 16px',
+                        cursor:         cargando ? 'not-allowed' : 'pointer',
+                        display:        'flex',
+                        alignItems:     'center',
+                        justifyContent: 'center',
+                        gap:            '8px',
+                        fontSize:       '13px',
+                        fontWeight:     600,
+                        color:          '#f59e0b',
+                        transition:     'all .2s',
+                        opacity:        cargando ? 0.5 : 1,
+                      }}
+                      onMouseEnter={e => {
+                        if (!cargando) e.currentTarget.style.background = 'rgba(245,158,11,0.15)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(245,158,11,0.08)'
+                      }}
+                    >
+                      ⚠️ El plan parece incompleto — Continuar desde aquí
+                    </button>
+                  )}
+
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {m.rol === 'bot' && m.opciones && m.opciones.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, maxWidth: '85%', paddingLeft: '42px' }}>
-              {m.opciones.map((op, j) => (
-                <button key={j} onClick={() => enviarMensaje(op)}
-                  disabled={cargando || !botListo || i < mensajes.length - 1}
-                  style={{
-                    background: 'rgba(6,11,24,0.8)', border: '1px solid rgba(5,150,105,0.4)', color: '#10b981',
-                    borderRadius: 20, padding: '6px 14px',
-                    cursor: (cargando || !botListo || i < mensajes.length - 1) ? 'default' : 'pointer',
-                    fontSize: 12, fontWeight: 500,
-                    opacity: (!botListo || i < mensajes.length - 1) ? 0.3 : 1,
-                    transition: 'all .2s', backdropFilter: 'blur(8px)',
-                  }}
-                  onMouseEnter={e => {
-                    if (i === mensajes.length - 1 && !cargando && botListo) {
+            {/* ── Chips de opciones ── */}
+            {m.rol === 'bot' && m.opciones && m.opciones.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, maxWidth: '85%', paddingLeft: '42px' }}>
+                {m.opciones.map((op, j) => (
+                  <button
+                    key={j}
+                    onClick={() => enviarMensaje(op)}
+                    disabled={cargando || !botListo || i < mensajes.length - 1}
+                    style={{
+                      background:     'rgba(6,11,24,0.8)',
+                      border:         '1px solid rgba(5,150,105,0.4)',
+                      color:          '#10b981',
+                      borderRadius:   20,
+                      padding:        '6px 14px',
+                      cursor:         (cargando || !botListo || i < mensajes.length - 1) ? 'default' : 'pointer',
+                      fontSize:       12,
+                      fontWeight:     500,
+                      opacity:        (!botListo || i < mensajes.length - 1) ? 0.3 : 1,
+                      transition:     'all .2s',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                    onMouseEnter={e => {
+                      if (i === mensajes.length - 1 && !cargando && botListo) {
+                        const b = e.currentTarget as HTMLButtonElement
+                        b.style.background  = 'rgba(5,150,105,0.2)'
+                        b.style.borderColor = '#10b981'
+                        b.style.transform   = 'translateY(-1px)'
+                      }
+                    }}
+                    onMouseLeave={e => {
                       const b = e.currentTarget as HTMLButtonElement
-                      b.style.background = 'rgba(5,150,105,0.2)'
-                      b.style.borderColor = '#10b981'
-                      b.style.transform = 'translateY(-1px)'
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    const b = e.currentTarget as HTMLButtonElement
-                    b.style.background = 'rgba(6,11,24,0.8)'
-                    b.style.borderColor = 'rgba(5,150,105,0.4)'
-                    b.style.transform = 'translateY(0)'
-                  }}
-                >{op}</button>
-              ))}
-            </div>
-          )}
-                  </div>
+                      b.style.background  = 'rgba(6,11,24,0.8)'
+                      b.style.borderColor = 'rgba(5,150,105,0.4)'
+                      b.style.transform   = 'translateY(0)'
+                    }}
+                  >
+                    {op}
+                  </button>
                 ))}
+              </div>
+            )}
 
+          </div>
+        ))}
 
-        {/* Feature 2: Typing indicator dinámico */}
+        {/* ── Typing indicator dinámico ── */}
         {cargando && <TypingIndicator paso={paso} />}
 
+        {/* ── Botón empezar de nuevo ── */}
         {paso === 'conversacion_libre' && !planListo && !cargando && (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-            <button onClick={async () => {
-              await fetch(`${API}/turismo/sesion/${sesionId}`, { method: 'DELETE' })
-              setMensajes([]); setDatos({}); setPaso('bienvenida')
-              setMercado('auto'); setPlanListo(false); setPlanTextoFinal('')
-              setBotListo(false); iniciado.current = false
-              iniciarConversacion()
-            }} style={{
-              background: 'transparent', border: '1px solid rgba(51,65,85,0.5)',
-              color: '#334155', borderRadius: 20, padding: '5px 16px',
-              fontSize: 11, cursor: 'pointer', transition: 'all .2s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#475569'; e.currentTarget.style.color = '#475569' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(51,65,85,0.5)'; e.currentTarget.style.color = '#334155' }}
-            >🔄 Empezar de nuevo</button>
+            <button
+              onClick={async () => {
+                await fetch(`${API}/turismo/sesion/${sesionId}`, { method: 'DELETE' })
+                setMensajes([])
+                setDatos({})
+                setPaso('bienvenida')
+                setMercado('auto')
+                setPlanListo(false)
+                setPlanTextoFinal('')
+                setBotListo(false)
+                iniciado.current = false
+                iniciarConversacion()
+              }}
+              style={{
+                background:   'transparent',
+                border:       '1px solid rgba(51,65,85,0.5)',
+                color:        '#334155',
+                borderRadius: 20,
+                padding:      '5px 16px',
+                fontSize:     11,
+                cursor:       'pointer',
+                transition:   'all .2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#475569'
+                e.currentTarget.style.color       = '#475569'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(51,65,85,0.5)'
+                e.currentTarget.style.color       = '#334155'
+              }}
+            >
+              🔄 Empezar de nuevo
+            </button>
           </div>
         )}
+
         <div ref={bottomRef} />
       </div>
 
-            {/* ── Zona de Input con los 4 features ── */}
+      {/* ── Zona de Input con los 4 features ── */}
       <div style={{
-        width: '100%', maxWidth: 720,
-        padding: '8px 20px 24px',
-        borderTop: '1px solid rgba(15,23,42,0.8)',
-        background: 'rgba(6,11,24,0.95)',
+        width:          '100%',
+        maxWidth:       720,
+        padding:        '8px 20px 24px',
+        borderTop:      '1px solid rgba(15,23,42,0.8)',
+        background:     'rgba(6,11,24,0.95)',
         backdropFilter: 'blur(20px)',
-        position: 'sticky', bottom: 0, zIndex: 10,
+        position:       'sticky',
+        bottom:         0,
+        zIndex:         10,
       }}>
 
-        {/* ── Feature 3: Sugerencias contextuales ── */}
+        {/* ── Sugerencias contextuales ── */}
         {mostrarSugerencias && sugerenciasFiltradas.length > 0 && !inputBloqueado && (
           <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 6,
+            display:    'flex',
+            flexWrap:   'wrap',
+            gap:        6,
             marginBottom: 8,
-            animation: 'sug-in .2s ease both',
+            animation:  'sug-in .2s ease both',
           }}>
             {sugerenciasFiltradas.map((sug, i) => (
               <button
@@ -1042,12 +1125,17 @@ export default function TurismoPage() {
                   inputRef.current?.focus()
                 }}
                 style={{
-                  background: 'rgba(16,185,129,0.08)',
-                  border: '1px solid rgba(16,185,129,0.25)',
-                  borderRadius: 20, padding: '5px 12px',
-                  fontSize: 12, color: '#6ee7b7',
-                  cursor: 'pointer', transition: 'all .15s',
-                  display: 'flex', alignItems: 'center', gap: 5,
+                  background:   'rgba(16,185,129,0.08)',
+                  border:       '1px solid rgba(16,185,129,0.25)',
+                  borderRadius: 20,
+                  padding:      '5px 12px',
+                  fontSize:     12,
+                  color:        '#6ee7b7',
+                  cursor:       'pointer',
+                  transition:   'all .15s',
+                  display:      'flex',
+                  alignItems:   'center',
+                  gap:          5,
                 }}
               >
                 <span style={{ fontSize: 10, opacity: 0.6 }}>✦</span>
@@ -1057,31 +1145,39 @@ export default function TurismoPage() {
           </div>
         )}
 
-        {/* ── Feature 4: Indicador de calidad ── */}
+        {/* ── Indicador de calidad ── */}
         {calidad.nivel !== 'vacio' && !inputBloqueado && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            marginBottom: 6, paddingLeft: 4,
+            display:     'flex',
+            alignItems:  'center',
+            gap:         8,
+            marginBottom: 6,
+            paddingLeft: 4,
           }}>
             <div style={{
-              flex: 1, height: 2, borderRadius: 99,
-              background: 'rgba(30,41,59,0.6)', overflow: 'hidden',
+              flex:       1,
+              height:     2,
+              borderRadius: 99,
+              background: 'rgba(30,41,59,0.6)',
+              overflow:   'hidden',
             }}>
               <div style={{
-                height: '100%',
-                width: `${calidad.porcentaje}%`,
+                height:     '100%',
+                width:      `${calidad.porcentaje}%`,
                 background: calidad.color,
                 borderRadius: 99,
                 transition: 'width .4s ease, background .3s ease',
-                boxShadow: `0 0 6px ${calidad.color}66`,
+                boxShadow:  `0 0 6px ${calidad.color}66`,
               }}/>
             </div>
             <span style={{
-              fontSize: 10, fontWeight: 600,
-              color: calidad.color,
+              fontSize:   10,
+              fontWeight: 600,
+              color:      calidad.color,
               transition: 'color .3s ease',
               whiteSpace: 'nowrap',
-              minWidth: 120, textAlign: 'right',
+              minWidth:   120,
+              textAlign:  'right',
             }}>
               {calidad.label}
             </span>
@@ -1090,9 +1186,12 @@ export default function TurismoPage() {
 
         {/* ── Input principal ── */}
         <div style={{
-          display: 'flex', gap: 8, alignItems: 'center',
-          background: 'rgba(15,23,42,0.8)',
-          borderRadius: 16, padding: '8px 8px 8px 16px',
+          display:      'flex',
+          gap:          8,
+          alignItems:   'center',
+          background:   'rgba(15,23,42,0.8)',
+          borderRadius: 16,
+          padding:      '8px 8px 8px 16px',
           border: `1px solid ${
             escuchando
               ? 'rgba(239,68,68,0.6)'
@@ -1123,40 +1222,45 @@ export default function TurismoPage() {
             }}
             onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
             placeholder={
-              escuchando    ? '🎤 Escuchando... habla ahora' :
-              !botListo     ? '⏳ Conectando con el asistente...' :
-              planListo     ? '✅ Plan generado — pulsa Descargar PDF' :
-              cargando      ? '⌛ Procesando...' :
-              '✍️ Escribe tu respuesta...'
+              escuchando ? '🎤 Escuchando... habla ahora'      :
+              !botListo  ? '⏳ Conectando con el asistente...' :
+              planListo  ? '✅ Plan generado — pulsa Descargar PDF' :
+              cargando   ? '⌛ Procesando...'                  :
+                           '✍️ Escribe tu respuesta...'
             }
             disabled={inputBloqueado}
             style={{
-              flex: 1, background: 'none', border: 'none',
-              color: (planListo || !botListo) ? '#334155' : escuchando ? '#fca5a5' : '#f1f5f9',
-              fontSize: 14, outline: 'none',
-              cursor: inputBloqueado ? 'not-allowed' : 'text',
+              flex:       1,
+              background: 'none',
+              border:     'none',
+              color:      (planListo || !botListo) ? '#334155' : escuchando ? '#fca5a5' : '#f1f5f9',
+              fontSize:   14,
+              outline:    'none',
+              cursor:     inputBloqueado ? 'not-allowed' : 'text',
               fontFamily: 'inherit',
             }}
           />
 
-          {/* ── Feature 1: Botón de voz ── */}
+          {/* ── Botón de voz ── */}
           {vozSoportada && !planListo && (
             <button
               onClick={toggleVoz}
               disabled={cargando || !botListo}
               title={escuchando ? 'Detener grabación' : 'Hablar con Irache'}
               style={{
-                background: escuchando
-                  ? 'rgba(239,68,68,0.15)'
-                  : 'rgba(30,41,59,0.6)',
-                border: `1px solid ${escuchando ? 'rgba(239,68,68,0.5)' : 'rgba(51,65,85,0.4)'}`,
+                background:   escuchando ? 'rgba(239,68,68,0.15)' : 'rgba(30,41,59,0.6)',
+                border:       `1px solid ${escuchando ? 'rgba(239,68,68,0.5)' : 'rgba(51,65,85,0.4)'}`,
                 borderRadius: 10,
-                width: 36, height: 36, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: (cargando || !botListo) ? 'not-allowed' : 'pointer',
-                transition: 'all .2s',
-                animation: escuchando ? 'mic-pulse 1.2s ease-in-out infinite' : 'none',
-                opacity: (!botListo || cargando) ? 0.4 : 1,
+                width:        36,
+                height:       36,
+                flexShrink:   0,
+                display:      'flex',
+                alignItems:   'center',
+                justifyContent: 'center',
+                cursor:       (cargando || !botListo) ? 'not-allowed' : 'pointer',
+                transition:   'all .2s',
+                animation:    escuchando ? 'mic-pulse 1.2s ease-in-out infinite' : 'none',
+                opacity:      (!botListo || cargando) ? 0.4 : 1,
               }}
               onMouseEnter={e => {
                 if (!cargando && botListo)
@@ -1182,15 +1286,20 @@ export default function TurismoPage() {
             onClick={() => enviarMensaje(input)}
             disabled={botonBloqueado}
             style={{
-              background: !botonBloqueado
+              background:   !botonBloqueado
                 ? 'linear-gradient(135deg,#059669,#10b981)'
                 : 'rgba(30,41,59,0.5)',
-              border: 'none', borderRadius: 12,
-              width: 38, height: 38, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: botonBloqueado ? 'not-allowed' : 'pointer',
-              transition: 'all .2s',
-              boxShadow: !botonBloqueado ? '0 4px 12px rgba(5,150,105,0.4)' : 'none',
+              border:       'none',
+              borderRadius: 12,
+              width:        38,
+              height:       38,
+              flexShrink:   0,
+              display:      'flex',
+              alignItems:   'center',
+              justifyContent: 'center',
+              cursor:       botonBloqueado ? 'not-allowed' : 'pointer',
+              transition:   'all .2s',
+              boxShadow:    !botonBloqueado ? '0 4px 12px rgba(5,150,105,0.4)' : 'none',
             }}
             onMouseEnter={e => { if (!botonBloqueado) e.currentTarget.style.transform = 'scale(1.08)' }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
@@ -1200,9 +1309,7 @@ export default function TurismoPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          ✅ MAPA INTERACTIVO
-      ══════════════════════════════════════════ */}
+      {/* ── Mapa interactivo ── */}
       {mapaAbierto && planTextoFinal && (
         <MapaInteractivo
           planTexto={planTextoFinal}
