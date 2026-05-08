@@ -53,7 +53,7 @@ function extraerLugares(planTexto: string, destino: string): Omit<LugarMapa, 'la
         const ctx = linea + ' ' + (lineas[idx - 2] ?? '')
         lugares.push({
           id: id++,
-          nombre: `${nombreLugar}${destino ? `, ${destino}` : ''}`,
+          nombre: `${nombreLugar}${destino ? `, ${destino}, España` : ', España'}`,
           tipo:   detectarTipo(col2 + ' ' + col3),
           dia:    detectarDia(ctx),
           hora:   col1.replace(/\*\*/g, '').trim(),
@@ -72,7 +72,7 @@ function extraerLugares(planTexto: string, destino: string): Omit<LugarMapa, 'la
     if (nombre.length > 2) {
       lugares.push({
         id: id++,
-        nombre: `${nombre}, ${direccion}${destino ? `, ${destino}` : ''}`,
+        nombre: `${nombre}, ${direccion}${destino ? `, ${destino}, España` : ', España'}`,
         tipo:   detectarTipo(nombre),
         dia:    'General',
         hora:   '',
@@ -92,34 +92,70 @@ function extraerLugares(planTexto: string, destino: string): Omit<LugarMapa, 'la
 }
 
 // ── Geocoding con fallback ────────────────────────────────────────────────────
-async function geocodificar(nombre: string): Promise<{ lat: number; lng: number } | null> {
-  // Intento 1: nombre completo
+async function geocodificar(
+  nombre: string,
+  destino: string
+): Promise<{ lat: number; lng: number } | null> {
+
+  // Detectar país según el destino para restringir la búsqueda
+  const esPaisEspana = /navarra|pamplona|pirineo|bardenas|olite|tudela|estella|irati|roncal|baztan|españa|spain/i.test(destino)
+  const esPaisFrancia = /paris|lyon|niza|burdeos|france|francia/i.test(destino)
+  const esPaisPortugal = /lisboa|oporto|porto|portugal/i.test(destino)
+  const esPaisItalia = /roma|milan|venecia|italia|italy/i.test(destino)
+
+  const countrycodes =
+    esPaisEspana   ? 'es' :
+    esPaisFrancia  ? 'fr' :
+    esPaisPortugal ? 'pt' :
+    esPaisItalia   ? 'it' :
+    ''   // sin restricción para destinos internacionales desconocidos
+
+  const buildUrl = (query: string, codes: string) => {
+    const base = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=es`
+    return codes ? `${base}&countrycodes=${codes}` : base
+  }
+
+  // Intento 1: nombre completo + restricción de país
   try {
-    const url  = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nombre)}&limit=1&accept-language=es`
-    const res  = await fetch(url, {
+    const url = buildUrl(nombre, countrycodes)
+    const res = await fetch(url, {
       headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
       signal:  AbortSignal.timeout(7000),
     })
     const data = await res.json()
     if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-  } catch { /* continúa al fallback */ }
+  } catch { /* continúa */ }
 
-  // Intento 2: solo la primera parte (antes de la primera coma)
+  // Intento 2: nombre simplificado (antes de la primera coma) + restricción
   const nombreSimple = nombre.split(',')[0].trim()
-  if (nombreSimple === nombre) return null   // ya era simple, no reintentar
+  if (nombreSimple !== nombre) {
+    try {
+      const url = buildUrl(nombreSimple, countrycodes)
+      const res = await fetch(url, {
+        headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
+        signal:  AbortSignal.timeout(5000),
+      })
+      const data = await res.json()
+      if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    } catch { /* sin coordenadas */ }
+  }
 
-  try {
-    const url2  = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nombreSimple)}&limit=1&accept-language=es`
-    const res2  = await fetch(url2, {
-      headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
-      signal:  AbortSignal.timeout(5000),
-    })
-    const data2 = await res2.json()
-    if (data2?.[0]) return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon) }
-  } catch { /* sin coordenadas */ }
+  // Intento 3: sin restricción de país (último recurso)
+  if (countrycodes) {
+    try {
+      const url = buildUrl(nombre, '')
+      const res = await fetch(url, {
+        headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
+        signal:  AbortSignal.timeout(5000),
+      })
+      const data = await res.json()
+      if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    } catch { /* sin coordenadas */ }
+  }
 
   return null
 }
+
 
 
 // ── Componente interno del mapa (solo se renderiza en cliente) ────────────────
@@ -312,7 +348,7 @@ useEffect(() => {
 
   pendientes.forEach((lugar, index) => {
     const timer = setTimeout(async () => {
-      const coords = await geocodificar(lugar.nombre)
+      const coords = await geocodificar(lugar.nombre, destino)
       setLugares(prev => prev.map(l =>
         l.id === lugar.id
           ? { ...l, lat: coords?.lat, lng: coords?.lng, geocoded: true }
