@@ -177,7 +177,7 @@ export default function ChatPage() {
             </h1>
             <p style={{ color: '#22c55e', fontSize: '0.7rem', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-              En línea · Servicio de Consumo de Navarra
+              En línea · Servicio Híbrido
             </p>
           </div>
           <a href="/" style={{

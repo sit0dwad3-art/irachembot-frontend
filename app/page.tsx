@@ -466,7 +466,7 @@ export default function Home() {
                 background:'#22c55e', display:'inline-block',
                 animation:'pulse-dot 2s infinite',
               }}/>
-              SERVICIO DE CONSUMO DE NAVARRA · EN LÍNEA
+              SERVICIO HÍBRIDO· EN LÍNEA
             </div>
 
             {/* ── ROBOT — en el flujo, entre badge y título ── */}
@@ -863,7 +863,7 @@ export default function Home() {
               <span style={{ fontWeight:700, fontSize:'.85rem', color:'#1e293b' }}>IracheBot</span>
             </div>
             <p style={{ margin:'0 0 .4rem', color:'#1e293b', fontSize:'.75rem' }}>
-              © 2026 IracheBot · Servicio de Consumo de Navarra
+              © 2026 IracheBot · Servicio de consumo y turismo.
             </p>
             <p style={{ margin:0, color:'#0f172a', fontSize:'.7rem' }}>
               Tus datos están protegidos · Evita compartir NIFs, cuentas bancarias o contraseñas

@@ -91,16 +91,36 @@ function extraerLugares(planTexto: string, destino: string): Omit<LugarMapa, 'la
   }).slice(0, 12)
 }
 
-// ── Geocoding ─────────────────────────────────────────────────────────────────
+// ── Geocoding con fallback ────────────────────────────────────────────────────
 async function geocodificar(nombre: string): Promise<{ lat: number; lng: number } | null> {
+  // Intento 1: nombre completo
   try {
-    const url  = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nombre)}&limit=1`
-    const res  = await fetch(url, { headers: { 'Accept-Language': 'es' } })
+    const url  = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nombre)}&limit=1&accept-language=es`
+    const res  = await fetch(url, {
+      headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
+      signal:  AbortSignal.timeout(7000),
+    })
     const data = await res.json()
     if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-    return null
-  } catch { return null }
+  } catch { /* continúa al fallback */ }
+
+  // Intento 2: solo la primera parte (antes de la primera coma)
+  const nombreSimple = nombre.split(',')[0].trim()
+  if (nombreSimple === nombre) return null   // ya era simple, no reintentar
+
+  try {
+    const url2  = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nombreSimple)}&limit=1&accept-language=es`
+    const res2  = await fetch(url2, {
+      headers: { 'Accept-Language': 'es', 'User-Agent': 'IracheBot/1.0' },
+      signal:  AbortSignal.timeout(5000),
+    })
+    const data2 = await res2.json()
+    if (data2?.[0]) return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon) }
+  } catch { /* sin coordenadas */ }
+
+  return null
 }
+
 
 // ── Componente interno del mapa (solo se renderiza en cliente) ────────────────
 function MapaLeaflet({
@@ -281,21 +301,36 @@ export default function MapaInteractivo({
     setDias(diasUnicos)
   }, [planTexto, destino])
 
-  // Geocoding progresivo
-  useEffect(() => {
-    const pendientes = lugares.filter(l => !l.geocoded)
-    if (pendientes.length === 0) return
-    const siguiente = pendientes[0]
+// ── Geocoding PARALELO — todos a la vez con delay escalonado ─────────────────
+useEffect(() => {
+  const pendientes = lugares.filter(l => !l.geocoded)
+  if (pendientes.length === 0) return
+
+  // Lanzar todos en paralelo con un pequeño delay escalonado
+  // para no saturar Nominatim (máx ~1 req/seg recomendado)
+  const controllers: AbortController[] = []
+
+  pendientes.forEach((lugar, index) => {
     const timer = setTimeout(async () => {
-      const coords = await geocodificar(siguiente.nombre)
+      const coords = await geocodificar(lugar.nombre)
       setLugares(prev => prev.map(l =>
-        l.id === siguiente.id
+        l.id === lugar.id
           ? { ...l, lat: coords?.lat, lng: coords?.lng, geocoded: true }
           : l
       ))
-    }, 1100)
-    return () => clearTimeout(timer)
-  }, [lugares])
+    }, index * 800)   // 800ms entre cada uno → respeta rate limit
+
+    // Guardamos el timer para limpieza
+    controllers.push({ abort: () => clearTimeout(timer) } as any)
+  })
+
+  return () => {
+    controllers.forEach(c => c.abort())
+  }
+// Solo se ejecuta cuando cambia la lista de lugares (no en cada update)
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [lugares.length, lugares.filter(l => !l.geocoded).length])
+
 
   const lugaresFiltrados = lugares.filter(l =>
     (filtroDia === 'Todo' || l.dia === filtroDia || l.dia === 'General') &&

@@ -219,41 +219,99 @@ const PANEL_ITEMS: PanelItem[] = [
   },
 ]
 
-function PanelFlotante({ onEnviar, bloqueado }: { onEnviar: (msg: string) => void; bloqueado: boolean }) {
+function PanelFlotante({
+  onEnviar,
+  bloqueado,
+  esMobil,
+}: {
+  onEnviar: (msg: string) => void
+  bloqueado: boolean
+  esMobil:  boolean
+}) {
   const [expandido,  setExpandido]  = useState<string | null>(null)
   const [visible,    setVisible]    = useState(true)
   const [minimizado, setMinimizado] = useState(false)
 
   if (!visible) return null
 
+  // En PC: sidebar fijo a la izquierda que NO pisa el chat
+  // En móvil: overlay flotante pequeño
+  const estiloContenedor: React.CSSProperties = esMobil
+    ? {
+        position:      'fixed',
+        left:          '8px',
+        top:           '50%',
+        transform:     'translateY(-50%)',
+        zIndex:        50,
+        display:       'flex',
+        flexDirection: 'column',
+        gap:           '6px',
+        maxHeight:     '80vh',
+        overflowY:     'auto',
+        animation:     'panel-in .4s ease both',
+      }
+    : {
+        position:      'fixed',
+        left:          '16px',
+        top:           '50%',
+        transform:     'translateY(-50%)',
+        zIndex:        50,
+        display:       'flex',
+        flexDirection: 'column',
+        gap:           '8px',
+        maxHeight:     '80vh',
+        overflowY:     'auto',
+        animation:     'panel-in .4s ease both',
+        // CLAVE: el chat tiene maxWidth 720 centrado,
+        // el panel vive FUERA de ese contenedor a la izquierda
+        // Solo ocultamos si la ventana es muy estrecha
+        ...(typeof window !== 'undefined' && window.innerWidth < 1100
+          ? { display: 'none' }
+          : {}),
+      }
+
   return (
     <>
       <style>{`
-        @keyframes panel-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes panel-in { from{opacity:0;transform:translateX(-20px) translateY(-50%)} to{opacity:1;transform:translateX(0) translateY(-50%)} }
         @keyframes sub-in   { from{opacity:0;transform:translateY(-8px) scaleY(0.95)} to{opacity:1;transform:translateY(0) scaleY(1)} }
         .panel-item:hover { background: rgba(255,255,255,0.06) !important; }
         .sub-btn:hover    { background: rgba(255,255,255,0.08) !important; transform: translateX(3px); }
+        @media (max-width: 1100px) {
+          .guia-rapida-panel { display: none !important; }
+        }
+        @media (max-width: 900px) {
+          .guia-rapida-panel { display: flex !important; }
+        }
       `}</style>
-      <div style={{
-        position: 'fixed', left: '16px', top: '50%', transform: 'translateY(-50%)',
-        zIndex: 50, display: 'flex', flexDirection: 'column', gap: '8px',
-        animation: 'panel-in .4s ease both', maxHeight: '80vh', overflowY: 'auto',
-      }}>
+      <div className="guia-rapida-panel" style={estiloContenedor}>
         {/* Cabecera */}
         <div style={{
-          background: 'rgba(10,15,30,0.95)', border: '1px solid rgba(99,102,241,0.3)',
-          borderRadius: '14px', padding: '8px 12px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
-          backdropFilter: 'blur(20px)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          background:     'rgba(10,15,30,0.95)',
+          border:         '1px solid rgba(99,102,241,0.3)',
+          borderRadius:   '14px',
+          padding:        '8px 12px',
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'space-between',
+          gap:            '8px',
+          backdropFilter: 'blur(20px)',
+          boxShadow:      '0 8px 32px rgba(0,0,0,0.4)',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#6366f1', letterSpacing: '.06em' }}>🧭 GUÍA RÁPIDA</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#6366f1', letterSpacing: '.06em' }}>
+            🧭 GUÍA RÁPIDA
+          </span>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button onClick={() => setMinimizado(m => !m)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', lineHeight: 1 }}>
+            <button
+              onClick={() => setMinimizado(m => !m)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', lineHeight: 1 }}
+            >
               <ChevronDown size={14} style={{ transform: minimizado ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s' }} />
             </button>
-            <button onClick={() => setVisible(false)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', lineHeight: 1 }}>
+            <button
+              onClick={() => setVisible(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', lineHeight: 1 }}
+            >
               <X size={14} />
             </button>
           </div>
@@ -261,52 +319,80 @@ function PanelFlotante({ onEnviar, bloqueado }: { onEnviar: (msg: string) => voi
 
         {!minimizado && PANEL_ITEMS.map(item => (
           <div key={item.id} style={{ position: 'relative' }}>
-            <button className="panel-item"
+            <button
+              className="panel-item"
               onClick={() => setExpandido(expandido === item.id ? null : item.id)}
               disabled={bloqueado}
               style={{
-                width: '100%',
+                width:      '100%',
                 background: expandido === item.id
                   ? `rgba(${item.color === '#6366f1' ? '99,102,241' : item.color === '#10b981' ? '16,185,129' : item.color === '#f59e0b' ? '245,158,11' : '167,139,250'},0.15)`
                   : 'rgba(10,15,30,0.92)',
-                border: `1px solid ${expandido === item.id ? item.color + '55' : 'rgba(30,41,59,0.8)'}`,
-                borderRadius: '12px', padding: '10px 12px',
-                cursor: bloqueado ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', gap: '8px',
+                border:         `1px solid ${expandido === item.id ? item.color + '55' : 'rgba(30,41,59,0.8)'}`,
+                borderRadius:   '12px',
+                padding:        '10px 12px',
+                cursor:         bloqueado ? 'not-allowed' : 'pointer',
+                display:        'flex',
+                alignItems:     'center',
+                gap:            '8px',
                 backdropFilter: 'blur(20px)',
-                boxShadow: expandido === item.id ? `0 4px 20px ${item.color}22` : '0 4px 16px rgba(0,0,0,0.3)',
-                transition: 'all .2s ease', opacity: bloqueado ? 0.4 : 1,
-                minWidth: '180px', textAlign: 'left',
-              }}>
+                boxShadow:      expandido === item.id ? `0 4px 20px ${item.color}22` : '0 4px 16px rgba(0,0,0,0.3)',
+                transition:     'all .2s ease',
+                opacity:        bloqueado ? 0.4 : 1,
+                minWidth:       '180px',
+                textAlign:      'left',
+              }}
+            >
               <span style={{
-                width: '26px', height: '26px', borderRadius: '8px',
-                background: `${item.color}22`, border: `1px solid ${item.color}44`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: item.color, flexShrink: 0,
+                width:           '26px',
+                height:          '26px',
+                borderRadius:    '8px',
+                background:      `${item.color}22`,
+                border:          `1px solid ${item.color}44`,
+                display:         'flex',
+                alignItems:      'center',
+                justifyContent:  'center',
+                color:           item.color,
+                flexShrink:      0,
               }}>{item.icon}</span>
               <span style={{ fontSize: '12px', fontWeight: 600, color: '#cbd5e1', flex: 1 }}>{item.label}</span>
-              <ChevronDown size={12} color="#475569"
-                style={{ transform: expandido === item.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s', flexShrink: 0 }} />
+              <ChevronDown
+                size={12}
+                color="#475569"
+                style={{ transform: expandido === item.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s', flexShrink: 0 }}
+              />
             </button>
 
             {expandido === item.id && item.subOpciones && (
               <div style={{
-                marginTop: '4px', background: 'rgba(8,12,24,0.97)',
-                border: `1px solid ${item.color}33`, borderRadius: '12px', overflow: 'hidden',
-                boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${item.color}11`,
-                animation: 'sub-in .2s ease both',
+                marginTop:  '4px',
+                background: 'rgba(8,12,24,0.97)',
+                border:     `1px solid ${item.color}33`,
+                borderRadius: '12px',
+                overflow:   'hidden',
+                boxShadow:  `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${item.color}11`,
+                animation:  'sub-in .2s ease both',
               }}>
                 {item.subOpciones.map((sub, idx) => (
-                  <button key={idx} className="sub-btn"
+                  <button
+                    key={idx}
+                    className="sub-btn"
                     onClick={() => { onEnviar(sub.mensaje); setExpandido(null) }}
                     disabled={bloqueado}
                     style={{
-                      width: '100%', background: 'transparent', border: 'none',
+                      width:        '100%',
+                      background:   'transparent',
+                      border:       'none',
                       borderBottom: idx < item.subOpciones!.length - 1 ? '1px solid rgba(30,41,59,0.5)' : 'none',
-                      padding: '9px 14px', cursor: bloqueado ? 'not-allowed' : 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      textAlign: 'left', transition: 'all .15s ease',
-                    }}>
+                      padding:      '9px 14px',
+                      cursor:       bloqueado ? 'not-allowed' : 'pointer',
+                      display:      'flex',
+                      alignItems:   'center',
+                      gap:          '8px',
+                      textAlign:    'left',
+                      transition:   'all .15s ease',
+                    }}
+                  >
                     {sub.icon && <span style={{ color: item.color, flexShrink: 0 }}>{sub.icon}</span>}
                     <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 500, lineHeight: 1.4 }}>{sub.label}</span>
                   </button>
@@ -464,6 +550,14 @@ export default function TurismoPage() {
   const [planTextoFinal, setPlanTextoFinal] = useState('')
   const [botListo,       setBotListo]       = useState(false)
   const [mapaAbierto, setMapaAbierto] = useState(false)
+
+  const [esMobil, setEsMobil] = useState(false)
+  useEffect(() => {
+  const check = () => setEsMobil(window.innerWidth < 900)
+  check()
+  window.addEventListener('resize', check)
+  return () => window.removeEventListener('resize', check)
+  }, [])
 
 
   // ── Feature 1: Voz ──────────────────────────────────────────────────────
@@ -674,7 +768,8 @@ export default function TurismoPage() {
         .sug-item:hover { background: rgba(16,185,129,0.15) !important; color: #10b981 !important; }
       `}</style>
 
-      <PanelFlotante onEnviar={enviarMensaje} bloqueado={inputBloqueado} />
+      <PanelFlotante onEnviar={enviarMensaje} bloqueado={inputBloqueado} esMobil={esMobil} />
+
 
       {/* ── Header ── */}
       <div style={{
